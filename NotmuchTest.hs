@@ -3,5 +3,6 @@ import Notmuch
 
 main = do
   putStrLn $ statusToString StatusUnbalancedFreezeThaw
-  db <- databaseCreate "/tmp"
+  databaseCreate "/tmp"
+  db <- databaseOpen "/tmp" DatabaseModeReadOnly
   return ()

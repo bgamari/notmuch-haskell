@@ -32,3 +32,17 @@ databaseCreate name = do
   when (db == nullPtr) $
        fail "database create failed"
   return db
+
+data DatabaseMode = 
+    DatabaseModeReadOnly |
+    DatabaseModeReadWrite
+    deriving Enum
+
+databaseOpen :: String -> DatabaseMode -> IO Database
+databaseOpen name databaseMode = do
+  db <- withCString name $
+        flip f_notmuch_database_open $
+        fromIntegral $ fromEnum databaseMode
+  when (db == nullPtr) $
+       fail "database open failed"
+  return db
