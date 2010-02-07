@@ -1,3 +1,10 @@
+-- Copyright © 2010 Bart Massey
+-- notmuch mail library low-level interface
+
+-- Originally produced automatically from notmuch.h
+-- by hsffig
+--   gcc -E -dD notmuch.h | hsffig >NOTMUCH_H.hsc
+-- Later hand-edited
 
 #if __GLASGOW_HASKELL__ && __GLASGOW_HASKELL__ < 409
 #include <Rts.h>
@@ -63,17 +70,25 @@
                 sizeof (t) == sizeof (double) ? "Double"  : \
                 "Float");
 
+#ifndef hsc_peek
 #define hsc_peek(t, f) \
     printf ("(\\hsc_ptr -> peekByteOff hsc_ptr %ld)", (long) offsetof (__quote__(t), f));
+#endif
 
+#ifndef hsc_poke
 #define hsc_poke(t, f) \
     printf ("(\\hsc_ptr -> pokeByteOff hsc_ptr %ld)", (long) offsetof (__quote__(t), f));
-
+#endif
+           
+#ifndef hsc_ptr
 #define hsc_ptr(t, f) \
     printf ("(\\hsc_ptr -> hsc_ptr `plusPtr` %ld)", (long) offsetof (__quote__(t), f));
+#endif
 
+#ifndef hsc_offset
 #define hsc_offset(t, f) \
     printf("(%ld)", (long) offsetof (__quote__(t), f));
+#endif
 
 #define hsc_size(t) \
     printf("(%ld)", (long) sizeof(t));
@@ -111,27 +126,13 @@
     }
 
 #def void _dummy_force_NOTMUCH_H_hsc_c (void) { }
-{-# OPTIONS -fglasgow-exts -XForeignFunctionInterface #-}
-
--- Split begin/NOTMUCH_H
 
 {-# OPTIONS -fglasgow-exts -XForeignFunctionInterface #-}
+
 #include "notmuch.h"
-#ifndef __quote__
-#define __quote__(x...) x
-#endif
 
 module NOTMUCH_H(
   module NOTMUCH_H,
-{-- #SPLIT#
-  module NOTMUCH_H_C,
-  module NOTMUCH_H_S,
-  module NOTMUCH_H_F,
-  module NOTMUCH_H_E,
-  module NOTMUCH_H_S_d,
-  module NOTMUCH_H_S_t,
-  module NOTMUCH_H_S_n,
-#SPLIT# --}
   module HSFFIG.FieldAccess,
   module Foreign,
   module Foreign.C.String,
@@ -142,31 +143,6 @@ import Foreign.Ptr
 import Foreign.C.Types
 import Foreign.C.String
 import HSFFIG.FieldAccess
-{-- #SPLIT#
-import NOTMUCH_H_C
-import NOTMUCH_H_S
-import NOTMUCH_H_F
-import NOTMUCH_H_E
-import NOTMUCH_H_S_d
-import NOTMUCH_H_S_t
-import NOTMUCH_H_S_n
-import HSFFIG.FieldAccess
-#SPLIT# --}
-
--- Split end
-
-
--- Split begin/NOTMUCH_H_C
-
-{-- #SPLIT#
-{-# OPTIONS -fglasgow-exts -XForeignFunctionInterface #-}
-module NOTMUCH_H_C (
-  module NOTMUCH_H_C
-) where
-
-import Foreign
-import Foreign.C.Types
-#SPLIT# --}
 
 c_CLOCKS_PER_SEC = #const CLOCKS_PER_SEC
 c_CLOCK_MONOTONIC = #const CLOCK_MONOTONIC
@@ -330,69 +306,6 @@ c_i386 = #const i386
 c_linux = #const linux
 c_unix = #const unix
 
--- Split end
-
-
--- Split begin/NOTMUCH_H_S
-
-{-- #SPLIT#
-{-# OPTIONS -fglasgow-exts -XForeignFunctionInterface #-}
-module NOTMUCH_H_S (
-  module NOTMUCH_H_S_S_363,
-  module NOTMUCH_H_S_S___locale_struct,
-  module NOTMUCH_H_S_S__notmuch_database,
-  module NOTMUCH_H_S_S__notmuch_directory,
-  module NOTMUCH_H_S_S__notmuch_filenames,
-  module NOTMUCH_H_S_S__notmuch_message,
-  module NOTMUCH_H_S_S__notmuch_messages,
-  module NOTMUCH_H_S_S__notmuch_query,
-  module NOTMUCH_H_S_S__notmuch_tags,
-  module NOTMUCH_H_S_S__notmuch_thread,
-  module NOTMUCH_H_S_S__notmuch_threads,
-  module NOTMUCH_H_S_S_itimerspec,
-  module NOTMUCH_H_S_S_locale_data,
-  module NOTMUCH_H_S_S_sigevent,
-  module NOTMUCH_H_S_S_timespec,
-  module NOTMUCH_H_S_S_tm,
-  module NOTMUCH_H_S
-) where
-
-import Foreign
-import Foreign.C.Types
-import NOTMUCH_H_S_S_363
-import NOTMUCH_H_S_S___locale_struct
-import NOTMUCH_H_S_S__notmuch_database
-import NOTMUCH_H_S_S__notmuch_directory
-import NOTMUCH_H_S_S__notmuch_filenames
-import NOTMUCH_H_S_S__notmuch_message
-import NOTMUCH_H_S_S__notmuch_messages
-import NOTMUCH_H_S_S__notmuch_query
-import NOTMUCH_H_S_S__notmuch_tags
-import NOTMUCH_H_S_S__notmuch_thread
-import NOTMUCH_H_S_S__notmuch_threads
-import NOTMUCH_H_S_S_itimerspec
-import NOTMUCH_H_S_S_locale_data
-import NOTMUCH_H_S_S_sigevent
-import NOTMUCH_H_S_S_timespec
-import NOTMUCH_H_S_S_tm
-#SPLIT# --}
-
-
--- Split end
-
-
--- Split begin/NOTMUCH_H_S_d
-
-{-- #SPLIT#
-{-# OPTIONS -fglasgow-exts -XForeignFunctionInterface #-}
-module NOTMUCH_H_S_d (
-  module NOTMUCH_H_S_d
-) where
-
-import Foreign
-import Foreign.C.Types
-#SPLIT# --}
-
 data V_sizeof = V_sizeof
 data X_sizeof = X_sizeof
 data D_sizeof = D_sizeof
@@ -459,23 +372,6 @@ data D_tm_gmtoff = D_tm_gmtoff
 data V_tm_zone = V_tm_zone
 data X_tm_zone = X_tm_zone
 data D_tm_zone = D_tm_zone
-
--- Split end
-
-
-
--- Split begin/NOTMUCH_H_S_t
-
-{-- #SPLIT#
-{-# OPTIONS -fglasgow-exts -XForeignFunctionInterface #-}
-module NOTMUCH_H_S_t (
-  module NOTMUCH_H_S_t
-) where
-
-import Foreign
-import Foreign.C.Types
-import NOTMUCH_H_S_n
-#SPLIT# --}
 
 type T___blkcnt64_t = CLLong
 type T___blkcnt_t = CLong
@@ -550,22 +446,6 @@ type T_size_t = CSize
 type T_time_t = CTime
 type T_timer_t = Ptr (CChar)
 
--- Split end
-
-
-
--- Split begin/NOTMUCH_H_S_n
-
-{-- #SPLIT#
-{-# OPTIONS -fglasgow-exts -XForeignFunctionInterface #-}
-module NOTMUCH_H_S_n (
-  module NOTMUCH_H_S_n
-) where
-
-import Foreign
-import Foreign.C.Types
-#SPLIT# --}
-
 newtype S_363 = S_363 ()
 newtype S___locale_struct = S___locale_struct ()
 newtype S__notmuch_database = S__notmuch_database ()
@@ -583,29 +463,6 @@ newtype S_sigevent = S_sigevent ()
 newtype S_timespec = S_timespec ()
 newtype S_tm = S_tm ()
 
--- Split end
-
-
---
-
-
--- Split begin/NOTMUCH_H_S_S_363
-
-{-- #SPLIT#
-{-# OPTIONS -fglasgow-exts -XForeignFunctionInterface #-}
-module NOTMUCH_H_S_S_363 (
-  module NOTMUCH_H_S_S_363
-) where
-
-import Foreign
-import Foreign.C.Types
-import HSFFIG.FieldAccess
-import NOTMUCH_H_S_t
-import NOTMUCH_H_S_n
-import NOTMUCH_H_S_d
-#SPLIT# --}
-
-
 instance HSFFIG.FieldAccess.FieldAccess S_363 (Ptr (CInt)) V___val where
   z --> V___val = (#peek __quote__(struct {int  __val[ 2 ] ; }), __val) z
   (z, V___val) <-- v = (#poke __quote__(struct {int  __val[ 2 ] ; }), __val) z v
@@ -622,274 +479,6 @@ instance Storable S_363 where
   alignment _ = 1
   peek _ = error $ "peek and poke cannot be used with struct {int  __val[ 2 ] ; }"
   poke _ = error $ "peek and poke cannot be used with struct {int  __val[ 2 ] ; }"
--- Split end
-
---
-
-
--- Split begin/NOTMUCH_H_S_S___locale_struct
-
-{-- #SPLIT#
-{-# OPTIONS -fglasgow-exts -XForeignFunctionInterface #-}
-module NOTMUCH_H_S_S___locale_struct (
-  module NOTMUCH_H_S_S___locale_struct
-) where
-
-import Foreign
-import Foreign.C.Types
-import HSFFIG.FieldAccess
-import NOTMUCH_H_S_t
-import NOTMUCH_H_S_n
-import NOTMUCH_H_S_d
-#SPLIT# --}
-
-
--- instance HSFFIG.FieldAccess.FieldAccess S___locale_struct (Ptr (Ptr tr (@S_locale_data))) V___locales where
---  z --> V___locales = return $ (#ptr __quote__(struct __locale_struct), __locales) z
---  (z, V___locales) <-- v = error $ "field __locales is a structure or an array: cannot be set"
--- 
--- instance HSFFIG.FieldAccess.FieldAccess S___locale_struct ([Int]) D___locales where
---  z --> D___locales = return [(#const( 13 ))]
---  (z, D___locales) <-- v = error $ "dimensions of a field  cannot be set"
--- 
--- instance HSFFIG.FieldAccess.FieldAccess S___locale_struct ((Ptr (CUShort))) V___ctype_b where
---   z --> V___ctype_b = (#peek __quote__(struct __locale_struct), __ctype_b) z
---   (z, V___ctype_b) <-- v = (#poke __quote__(struct __locale_struct), __ctype_b) z v
--- 
--- instance HSFFIG.FieldAccess.FieldAccess S___locale_struct ((Ptr (CInt))) V___ctype_tolower where
---   z --> V___ctype_tolower = (#peek __quote__(struct __locale_struct), __ctype_tolower) z
---   (z, V___ctype_tolower) <-- v = (#poke __quote__(struct __locale_struct), __ctype_tolower) z v
--- 
--- instance HSFFIG.FieldAccess.FieldAccess S___locale_struct ((Ptr (CInt))) V___ctype_toupper where
---   z --> V___ctype_toupper = (#peek __quote__(struct __locale_struct), __ctype_toupper) z
---   (z, V___ctype_toupper) <-- v = (#poke __quote__(struct __locale_struct), __ctype_toupper) z v
--- 
--- instance HSFFIG.FieldAccess.FieldAccess S___locale_struct (Ptr (Ptr (CChar))) V___names where
---   z --> V___names = (#peek __quote__(struct __locale_struct), __names) z
---   (z, V___names) <-- v = (#poke __quote__(struct __locale_struct), __names) z v
--- 
--- instance HSFFIG.FieldAccess.FieldAccess S___locale_struct ([Int]) D___names where
---   z --> D___names = return [(#const( 13 ))]
---   (z, D___names) <-- v = error $ "dimensions of a field  cannot be set"
--- 
--- instance HSFFIG.FieldAccess.FieldAccess S___locale_struct (CInt) V_sizeof where
---   z --> V_sizeof = return $ (#size __quote__(struct __locale_struct))
--- 
--- instance Storable S___locale_struct where
---   sizeOf _ = (#size __quote__(struct __locale_struct))
---   alignment _ = 1
---   peek _ = error $ "peek and poke cannot be used with struct __locale_struct"
---   poke _ = error $ "peek and poke cannot be used with struct __locale_struct"
--- Split end
-
---
-
-
--- Split begin/NOTMUCH_H_S_S__notmuch_database
-
-{-- #SPLIT#
-{-# OPTIONS -fglasgow-exts -XForeignFunctionInterface #-}
-module NOTMUCH_H_S_S__notmuch_database (
-  module NOTMUCH_H_S_S__notmuch_database
-) where
-
-import Foreign
-import Foreign.C.Types
-import HSFFIG.FieldAccess
-import NOTMUCH_H_S_t
-import NOTMUCH_H_S_n
-import NOTMUCH_H_S_d
-#SPLIT# --}
-
--- Split end
-
---
-
-
--- Split begin/NOTMUCH_H_S_S__notmuch_directory
-
-{-- #SPLIT#
-{-# OPTIONS -fglasgow-exts -XForeignFunctionInterface #-}
-module NOTMUCH_H_S_S__notmuch_directory (
-  module NOTMUCH_H_S_S__notmuch_directory
-) where
-
-import Foreign
-import Foreign.C.Types
-import HSFFIG.FieldAccess
-import NOTMUCH_H_S_t
-import NOTMUCH_H_S_n
-import NOTMUCH_H_S_d
-#SPLIT# --}
-
--- Split end
-
---
-
-
--- Split begin/NOTMUCH_H_S_S__notmuch_filenames
-
-{-- #SPLIT#
-{-# OPTIONS -fglasgow-exts -XForeignFunctionInterface #-}
-module NOTMUCH_H_S_S__notmuch_filenames (
-  module NOTMUCH_H_S_S__notmuch_filenames
-) where
-
-import Foreign
-import Foreign.C.Types
-import HSFFIG.FieldAccess
-import NOTMUCH_H_S_t
-import NOTMUCH_H_S_n
-import NOTMUCH_H_S_d
-#SPLIT# --}
-
--- Split end
-
---
-
-
--- Split begin/NOTMUCH_H_S_S__notmuch_message
-
-{-- #SPLIT#
-{-# OPTIONS -fglasgow-exts -XForeignFunctionInterface #-}
-module NOTMUCH_H_S_S__notmuch_message (
-  module NOTMUCH_H_S_S__notmuch_message
-) where
-
-import Foreign
-import Foreign.C.Types
-import HSFFIG.FieldAccess
-import NOTMUCH_H_S_t
-import NOTMUCH_H_S_n
-import NOTMUCH_H_S_d
-#SPLIT# --}
-
--- Split end
-
---
-
-
--- Split begin/NOTMUCH_H_S_S__notmuch_messages
-
-{-- #SPLIT#
-{-# OPTIONS -fglasgow-exts -XForeignFunctionInterface #-}
-module NOTMUCH_H_S_S__notmuch_messages (
-  module NOTMUCH_H_S_S__notmuch_messages
-) where
-
-import Foreign
-import Foreign.C.Types
-import HSFFIG.FieldAccess
-import NOTMUCH_H_S_t
-import NOTMUCH_H_S_n
-import NOTMUCH_H_S_d
-#SPLIT# --}
-
--- Split end
-
---
-
-
--- Split begin/NOTMUCH_H_S_S__notmuch_query
-
-{-- #SPLIT#
-{-# OPTIONS -fglasgow-exts -XForeignFunctionInterface #-}
-module NOTMUCH_H_S_S__notmuch_query (
-  module NOTMUCH_H_S_S__notmuch_query
-) where
-
-import Foreign
-import Foreign.C.Types
-import HSFFIG.FieldAccess
-import NOTMUCH_H_S_t
-import NOTMUCH_H_S_n
-import NOTMUCH_H_S_d
-#SPLIT# --}
-
--- Split end
-
---
-
-
--- Split begin/NOTMUCH_H_S_S__notmuch_tags
-
-{-- #SPLIT#
-{-# OPTIONS -fglasgow-exts -XForeignFunctionInterface #-}
-module NOTMUCH_H_S_S__notmuch_tags (
-  module NOTMUCH_H_S_S__notmuch_tags
-) where
-
-import Foreign
-import Foreign.C.Types
-import HSFFIG.FieldAccess
-import NOTMUCH_H_S_t
-import NOTMUCH_H_S_n
-import NOTMUCH_H_S_d
-#SPLIT# --}
-
--- Split end
-
---
-
-
--- Split begin/NOTMUCH_H_S_S__notmuch_thread
-
-{-- #SPLIT#
-{-# OPTIONS -fglasgow-exts -XForeignFunctionInterface #-}
-module NOTMUCH_H_S_S__notmuch_thread (
-  module NOTMUCH_H_S_S__notmuch_thread
-) where
-
-import Foreign
-import Foreign.C.Types
-import HSFFIG.FieldAccess
-import NOTMUCH_H_S_t
-import NOTMUCH_H_S_n
-import NOTMUCH_H_S_d
-#SPLIT# --}
-
--- Split end
-
---
-
-
--- Split begin/NOTMUCH_H_S_S__notmuch_threads
-
-{-- #SPLIT#
-{-# OPTIONS -fglasgow-exts -XForeignFunctionInterface #-}
-module NOTMUCH_H_S_S__notmuch_threads (
-  module NOTMUCH_H_S_S__notmuch_threads
-) where
-
-import Foreign
-import Foreign.C.Types
-import HSFFIG.FieldAccess
-import NOTMUCH_H_S_t
-import NOTMUCH_H_S_n
-import NOTMUCH_H_S_d
-#SPLIT# --}
-
--- Split end
-
---
-
-
--- Split begin/NOTMUCH_H_S_S_itimerspec
-
-{-- #SPLIT#
-{-# OPTIONS -fglasgow-exts -XForeignFunctionInterface #-}
-module NOTMUCH_H_S_S_itimerspec (
-  module NOTMUCH_H_S_S_itimerspec
-) where
-
-import Foreign
-import Foreign.C.Types
-import HSFFIG.FieldAccess
-import NOTMUCH_H_S_t
-import NOTMUCH_H_S_n
-import NOTMUCH_H_S_d
-#SPLIT# --}
-
 
 instance HSFFIG.FieldAccess.FieldAccess S_itimerspec ((Ptr S_timespec)) V_it_interval where
   z --> V_it_interval = return $ (#ptr __quote__(struct itimerspec), it_interval) z
@@ -907,69 +496,6 @@ instance Storable S_itimerspec where
   alignment _ = 1
   peek _ = error $ "peek and poke cannot be used with struct itimerspec"
   poke _ = error $ "peek and poke cannot be used with struct itimerspec"
--- Split end
-
---
-
-
--- Split begin/NOTMUCH_H_S_S_locale_data
-
-{-- #SPLIT#
-{-# OPTIONS -fglasgow-exts -XForeignFunctionInterface #-}
-module NOTMUCH_H_S_S_locale_data (
-  module NOTMUCH_H_S_S_locale_data
-) where
-
-import Foreign
-import Foreign.C.Types
-import HSFFIG.FieldAccess
-import NOTMUCH_H_S_t
-import NOTMUCH_H_S_n
-import NOTMUCH_H_S_d
-#SPLIT# --}
-
--- Split end
-
---
-
-
--- Split begin/NOTMUCH_H_S_S_sigevent
-
-{-- #SPLIT#
-{-# OPTIONS -fglasgow-exts -XForeignFunctionInterface #-}
-module NOTMUCH_H_S_S_sigevent (
-  module NOTMUCH_H_S_S_sigevent
-) where
-
-import Foreign
-import Foreign.C.Types
-import HSFFIG.FieldAccess
-import NOTMUCH_H_S_t
-import NOTMUCH_H_S_n
-import NOTMUCH_H_S_d
-#SPLIT# --}
-
--- Split end
-
---
-
-
--- Split begin/NOTMUCH_H_S_S_timespec
-
-{-- #SPLIT#
-{-# OPTIONS -fglasgow-exts -XForeignFunctionInterface #-}
-module NOTMUCH_H_S_S_timespec (
-  module NOTMUCH_H_S_S_timespec
-) where
-
-import Foreign
-import Foreign.C.Types
-import HSFFIG.FieldAccess
-import NOTMUCH_H_S_t
-import NOTMUCH_H_S_n
-import NOTMUCH_H_S_d
-#SPLIT# --}
-
 
 instance HSFFIG.FieldAccess.FieldAccess S_timespec ((CLong)) V_tv_sec where
   z --> V_tv_sec = (#peek __quote__(struct timespec), tv_sec) z
@@ -987,27 +513,6 @@ instance Storable S_timespec where
   alignment _ = 1
   peek _ = error $ "peek and poke cannot be used with struct timespec"
   poke _ = error $ "peek and poke cannot be used with struct timespec"
--- Split end
-
---
-
-
--- Split begin/NOTMUCH_H_S_S_tm
-
-{-- #SPLIT#
-{-# OPTIONS -fglasgow-exts -XForeignFunctionInterface #-}
-module NOTMUCH_H_S_S_tm (
-  module NOTMUCH_H_S_S_tm
-) where
-
-import Foreign
-import Foreign.C.Types
-import HSFFIG.FieldAccess
-import NOTMUCH_H_S_t
-import NOTMUCH_H_S_n
-import NOTMUCH_H_S_d
-#SPLIT# --}
-
 
 instance HSFFIG.FieldAccess.FieldAccess S_tm ((CInt)) V_tm_sec where
   z --> V_tm_sec = (#peek __quote__(struct tm), tm_sec) z
@@ -1061,19 +566,6 @@ instance Storable S_tm where
   alignment _ = 1
   peek _ = error $ "peek and poke cannot be used with struct tm"
   poke _ = error $ "peek and poke cannot be used with struct tm"
--- Split end
-
--- Split begin/NOTMUCH_H_E
-
-{-- #SPLIT#
-{-# OPTIONS -fglasgow-exts -XForeignFunctionInterface #-}
-module NOTMUCH_H_E (
-  module NOTMUCH_H_E
-) where
-
-import Foreign
-import Foreign.C.Types
-#SPLIT# --}
 
 e_NOTMUCH_DATABASE_MODE_READ_ONLY = #const  0 
 e_NOTMUCH_DATABASE_MODE_READ_WRITE = #const ( 0 ) + 1
@@ -1093,92 +585,45 @@ e_NOTMUCH_STATUS_TAG_TOO_LONG = #const (((((((( 0 ) + 1) + 1) + 1) + 1) + 1) + 1
 e_NOTMUCH_STATUS_UNBALANCED_FREEZE_THAW = #const ((((((((( 0 ) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1
 e_NOTMUCH_STATUS_LAST_STATUS = #const (((((((((( 0 ) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1
 
--- Split end
-
-#include <stdlib.h>
-
--- Split begin/NOTMUCH_H_F
-
-{-- #SPLIT#
-{-# OPTIONS -fglasgow-exts -XForeignFunctionInterface #-}
-module NOTMUCH_H_F (
-  module NOTMUCH_H_F
-) where
-
-import Foreign
-import Foreign.C.Types
-import NOTMUCH_H_S
-import NOTMUCH_H_C
-import NOTMUCH_H_E
-import NOTMUCH_H_S_d
-import NOTMUCH_H_S_t
-import NOTMUCH_H_S_n
-#SPLIT# --}
 
 foreign import ccall "static notmuch.h clock"
   f_clock :: IO (CClock)
 
---
-
 foreign import ccall "static notmuch.h time"
   f_time :: Ptr (CTime) -> IO (CTime)
-
---
 
 foreign import ccall "static notmuch.h mktime"
   f_mktime :: Ptr (S_tm) -> IO (CTime)
 
---
-
 foreign import ccall "static notmuch.h strftime"
   f_strftime :: Ptr (CChar) -> CSize -> Ptr (CChar) -> Ptr (S_tm) -> IO (CSize)
-
---
 
 foreign import ccall "static notmuch.h strftime_l"
   f_strftime_l :: Ptr (CChar) -> CSize -> Ptr (CChar) -> Ptr (S_tm) -> Ptr (S___locale_struct) -> IO (CSize)
 
---
-
 foreign import ccall "static notmuch.h gmtime"
   f_gmtime :: Ptr (CTime) -> IO (Ptr (S_tm))
-
---
 
 foreign import ccall "static notmuch.h localtime"
   f_localtime :: Ptr (CTime) -> IO (Ptr (S_tm))
 
---
-
 foreign import ccall "static notmuch.h gmtime_r"
   f_gmtime_r :: Ptr (CTime) -> Ptr (S_tm) -> IO (Ptr (S_tm))
-
---
 
 foreign import ccall "static notmuch.h localtime_r"
   f_localtime_r :: Ptr (CTime) -> Ptr (S_tm) -> IO (Ptr (S_tm))
 
---
-
 foreign import ccall "static notmuch.h asctime"
   f_asctime :: Ptr (S_tm) -> IO (Ptr (CChar))
-
---
 
 foreign import ccall "static notmuch.h ctime"
   f_ctime :: Ptr (CTime) -> IO (Ptr (CChar))
 
---
-
 foreign import ccall "static notmuch.h asctime_r"
   f_asctime_r :: Ptr (S_tm) -> Ptr (CChar) -> IO (Ptr (CChar))
 
---
-
 foreign import ccall "static notmuch.h ctime_r"
   f_ctime_r :: Ptr (CTime) -> Ptr (CChar) -> IO (Ptr (CChar))
-
---
 
 foreign import ccall "notmuch.h &__tzname" 
   ___476___ :: Ptr (Ptr (CChar))
@@ -1186,15 +631,11 @@ p___tzname = ___476___
 v___tzname = peek ___476___
 s___tzname = poke ___476___
 
---
-
 foreign import ccall "notmuch.h &__daylight" 
   ___477___ :: Ptr (CInt)
 p___daylight = ___477___
 v___daylight = peek ___477___
 s___daylight = poke ___477___
-
---
 
 foreign import ccall "notmuch.h &__timezone" 
   ___478___ :: Ptr (CLong)
@@ -1202,20 +643,14 @@ p___timezone = ___478___
 v___timezone = peek ___478___
 s___timezone = poke ___478___
 
---
-
 foreign import ccall "notmuch.h &tzname" 
   ___479___ :: Ptr (Ptr (CChar))
 p_tzname = ___479___
 v_tzname = peek ___479___
 s_tzname = poke ___479___
 
---
-
 foreign import ccall "static notmuch.h tzset"
   f_tzset :: IO (())
-
---
 
 foreign import ccall "notmuch.h &daylight" 
   ___481___ :: Ptr (CInt)
@@ -1223,418 +658,250 @@ p_daylight = ___481___
 v_daylight = peek ___481___
 s_daylight = poke ___481___
 
---
-
 foreign import ccall "notmuch.h &timezone" 
   ___482___ :: Ptr (CLong)
 p_timezone = ___482___
 v_timezone = peek ___482___
 s_timezone = poke ___482___
 
---
-
 foreign import ccall "static notmuch.h stime"
   f_stime :: Ptr (CTime) -> IO (CInt)
-
---
 
 foreign import ccall "static notmuch.h timegm"
   f_timegm :: Ptr (S_tm) -> IO (CTime)
 
---
-
 foreign import ccall "static notmuch.h timelocal"
   f_timelocal :: Ptr (S_tm) -> IO (CTime)
-
---
 
 foreign import ccall "static notmuch.h nanosleep"
   f_nanosleep :: Ptr (S_timespec) -> Ptr (S_timespec) -> IO (CInt)
 
---
-
 foreign import ccall "static notmuch.h clock_getres"
   f_clock_getres :: CInt -> Ptr (S_timespec) -> IO (CInt)
-
---
 
 foreign import ccall "static notmuch.h clock_gettime"
   f_clock_gettime :: CInt -> Ptr (S_timespec) -> IO (CInt)
 
---
-
 foreign import ccall "static notmuch.h clock_settime"
   f_clock_settime :: CInt -> Ptr (S_timespec) -> IO (CInt)
-
---
 
 foreign import ccall "static notmuch.h clock_nanosleep"
   f_clock_nanosleep :: CInt -> CInt -> Ptr (S_timespec) -> Ptr (S_timespec) -> IO (CInt)
 
---
-
 foreign import ccall "static notmuch.h clock_getcpuclockid"
   f_clock_getcpuclockid :: CInt -> Ptr (CInt) -> IO (CInt)
-
---
 
 foreign import ccall "static notmuch.h timer_create"
   f_timer_create :: CInt -> Ptr (S_sigevent) -> Ptr (Ptr (CChar)) -> IO (CInt)
 
---
-
 foreign import ccall "static notmuch.h timer_delete"
   f_timer_delete :: Ptr (CChar) -> IO (CInt)
-
---
 
 foreign import ccall "static notmuch.h timer_settime"
   f_timer_settime :: Ptr (CChar) -> CInt -> Ptr (S_itimerspec) -> Ptr (S_itimerspec) -> IO (CInt)
 
---
-
 foreign import ccall "static notmuch.h timer_gettime"
   f_timer_gettime :: Ptr (CChar) -> Ptr (S_itimerspec) -> IO (CInt)
-
---
 
 foreign import ccall "static notmuch.h timer_getoverrun"
   f_timer_getoverrun :: Ptr (CChar) -> IO (CInt)
 
---
-
 foreign import ccall "static notmuch.h notmuch_status_to_string"
   f_notmuch_status_to_string :: CInt -> IO (Ptr (CChar))
-
---
 
 foreign import ccall "static notmuch.h notmuch_database_create"
   f_notmuch_database_create :: Ptr (CChar) -> IO (Ptr (S__notmuch_database))
 
---
-
 foreign import ccall "static notmuch.h notmuch_database_open"
   f_notmuch_database_open :: Ptr (CChar) -> CInt -> IO (Ptr (S__notmuch_database))
-
---
 
 foreign import ccall "static notmuch.h notmuch_database_close"
   f_notmuch_database_close :: Ptr (S__notmuch_database) -> IO (())
 
---
-
 foreign import ccall "static notmuch.h notmuch_database_get_path"
   f_notmuch_database_get_path :: Ptr (S__notmuch_database) -> IO (Ptr (CChar))
-
---
 
 foreign import ccall "static notmuch.h notmuch_database_get_version"
   f_notmuch_database_get_version :: Ptr (S__notmuch_database) -> IO (CUInt)
 
---
-
 foreign import ccall "static notmuch.h notmuch_database_needs_upgrade"
   f_notmuch_database_needs_upgrade :: Ptr (S__notmuch_database) -> IO (CInt)
-
---
 
 foreign import ccall "static notmuch.h notmuch_database_upgrade"
   f_notmuch_database_upgrade :: Ptr (S__notmuch_database) -> FunPtr (Ptr (CChar) -> CDouble -> IO (())) -> Ptr (CChar) -> IO (CInt)
 foreign import ccall "wrapper"
   w_notmuch_database_upgrade_1 :: (Ptr (CChar) -> CDouble -> IO (())) -> IO (FunPtr (Ptr (CChar) -> CDouble -> IO (())))
 
---
-
 foreign import ccall "static notmuch.h notmuch_database_get_directory"
   f_notmuch_database_get_directory :: Ptr (S__notmuch_database) -> Ptr (CChar) -> IO (Ptr (S__notmuch_directory))
-
---
 
 foreign import ccall "static notmuch.h notmuch_database_add_message"
   f_notmuch_database_add_message :: Ptr (S__notmuch_database) -> Ptr (CChar) -> Ptr (Ptr (S__notmuch_message)) -> IO (CInt)
 
---
-
 foreign import ccall "static notmuch.h notmuch_database_remove_message"
   f_notmuch_database_remove_message :: Ptr (S__notmuch_database) -> Ptr (CChar) -> IO (CInt)
-
---
 
 foreign import ccall "static notmuch.h notmuch_database_find_message"
   f_notmuch_database_find_message :: Ptr (S__notmuch_database) -> Ptr (CChar) -> IO (Ptr (S__notmuch_message))
 
---
-
 foreign import ccall "static notmuch.h notmuch_database_get_all_tags"
   f_notmuch_database_get_all_tags :: Ptr (S__notmuch_database) -> IO (Ptr (S__notmuch_tags))
-
---
 
 foreign import ccall "static notmuch.h notmuch_query_create"
   f_notmuch_query_create :: Ptr (S__notmuch_database) -> Ptr (CChar) -> IO (Ptr (S__notmuch_query))
 
---
-
 foreign import ccall "static notmuch.h notmuch_query_set_sort"
   f_notmuch_query_set_sort :: Ptr (S__notmuch_query) -> CInt -> IO (())
-
---
 
 foreign import ccall "static notmuch.h notmuch_query_search_threads"
   f_notmuch_query_search_threads :: Ptr (S__notmuch_query) -> IO (Ptr (S__notmuch_threads))
 
---
-
 foreign import ccall "static notmuch.h notmuch_query_search_messages"
   f_notmuch_query_search_messages :: Ptr (S__notmuch_query) -> IO (Ptr (S__notmuch_messages))
-
---
 
 foreign import ccall "static notmuch.h notmuch_query_destroy"
   f_notmuch_query_destroy :: Ptr (S__notmuch_query) -> IO (())
 
---
-
 foreign import ccall "static notmuch.h notmuch_threads_has_more"
   f_notmuch_threads_has_more :: Ptr (S__notmuch_threads) -> IO (CInt)
-
---
 
 foreign import ccall "static notmuch.h notmuch_threads_get"
   f_notmuch_threads_get :: Ptr (S__notmuch_threads) -> IO (Ptr (S__notmuch_thread))
 
---
-
 foreign import ccall "static notmuch.h notmuch_threads_advance"
   f_notmuch_threads_advance :: Ptr (S__notmuch_threads) -> IO (())
-
---
 
 foreign import ccall "static notmuch.h notmuch_threads_destroy"
   f_notmuch_threads_destroy :: Ptr (S__notmuch_threads) -> IO (())
 
---
-
 foreign import ccall "static notmuch.h notmuch_query_count_messages"
   f_notmuch_query_count_messages :: Ptr (S__notmuch_query) -> IO (CUInt)
-
---
 
 foreign import ccall "static notmuch.h notmuch_thread_get_thread_id"
   f_notmuch_thread_get_thread_id :: Ptr (S__notmuch_thread) -> IO (Ptr (CChar))
 
---
-
 foreign import ccall "static notmuch.h notmuch_thread_get_total_messages"
   f_notmuch_thread_get_total_messages :: Ptr (S__notmuch_thread) -> IO (CInt)
-
---
 
 foreign import ccall "static notmuch.h notmuch_thread_get_toplevel_messages"
   f_notmuch_thread_get_toplevel_messages :: Ptr (S__notmuch_thread) -> IO (Ptr (S__notmuch_messages))
 
---
-
 foreign import ccall "static notmuch.h notmuch_thread_get_matched_messages"
   f_notmuch_thread_get_matched_messages :: Ptr (S__notmuch_thread) -> IO (CInt)
-
---
 
 foreign import ccall "static notmuch.h notmuch_thread_get_authors"
   f_notmuch_thread_get_authors :: Ptr (S__notmuch_thread) -> IO (Ptr (CChar))
 
---
-
 foreign import ccall "static notmuch.h notmuch_thread_get_subject"
   f_notmuch_thread_get_subject :: Ptr (S__notmuch_thread) -> IO (Ptr (CChar))
-
---
 
 foreign import ccall "static notmuch.h notmuch_thread_get_oldest_date"
   f_notmuch_thread_get_oldest_date :: Ptr (S__notmuch_thread) -> IO (CTime)
 
---
-
 foreign import ccall "static notmuch.h notmuch_thread_get_newest_date"
   f_notmuch_thread_get_newest_date :: Ptr (S__notmuch_thread) -> IO (CTime)
-
---
 
 foreign import ccall "static notmuch.h notmuch_thread_get_tags"
   f_notmuch_thread_get_tags :: Ptr (S__notmuch_thread) -> IO (Ptr (S__notmuch_tags))
 
---
-
 foreign import ccall "static notmuch.h notmuch_thread_destroy"
   f_notmuch_thread_destroy :: Ptr (S__notmuch_thread) -> IO (())
-
---
 
 foreign import ccall "static notmuch.h notmuch_messages_has_more"
   f_notmuch_messages_has_more :: Ptr (S__notmuch_messages) -> IO (CInt)
 
---
-
 foreign import ccall "static notmuch.h notmuch_messages_get"
   f_notmuch_messages_get :: Ptr (S__notmuch_messages) -> IO (Ptr (S__notmuch_message))
-
---
 
 foreign import ccall "static notmuch.h notmuch_messages_advance"
   f_notmuch_messages_advance :: Ptr (S__notmuch_messages) -> IO (())
 
---
-
 foreign import ccall "static notmuch.h notmuch_messages_destroy"
   f_notmuch_messages_destroy :: Ptr (S__notmuch_messages) -> IO (())
-
---
 
 foreign import ccall "static notmuch.h notmuch_messages_collect_tags"
   f_notmuch_messages_collect_tags :: Ptr (S__notmuch_messages) -> IO (Ptr (S__notmuch_tags))
 
---
-
 foreign import ccall "static notmuch.h notmuch_message_get_message_id"
   f_notmuch_message_get_message_id :: Ptr (S__notmuch_message) -> IO (Ptr (CChar))
-
---
 
 foreign import ccall "static notmuch.h notmuch_message_get_thread_id"
   f_notmuch_message_get_thread_id :: Ptr (S__notmuch_message) -> IO (Ptr (CChar))
 
---
-
 foreign import ccall "static notmuch.h notmuch_message_get_replies"
   f_notmuch_message_get_replies :: Ptr (S__notmuch_message) -> IO (Ptr (S__notmuch_messages))
-
---
 
 foreign import ccall "static notmuch.h notmuch_message_get_filename"
   f_notmuch_message_get_filename :: Ptr (S__notmuch_message) -> IO (Ptr (CChar))
 
---
-
 foreign import ccall "static notmuch.h notmuch_message_get_flag"
   f_notmuch_message_get_flag :: Ptr (S__notmuch_message) -> CInt -> IO (CInt)
-
---
 
 foreign import ccall "static notmuch.h notmuch_message_set_flag"
   f_notmuch_message_set_flag :: Ptr (S__notmuch_message) -> CInt -> CInt -> IO (())
 
---
-
 foreign import ccall "static notmuch.h notmuch_message_get_date"
   f_notmuch_message_get_date :: Ptr (S__notmuch_message) -> IO (CTime)
-
---
 
 foreign import ccall "static notmuch.h notmuch_message_get_header"
   f_notmuch_message_get_header :: Ptr (S__notmuch_message) -> Ptr (CChar) -> IO (Ptr (CChar))
 
---
-
 foreign import ccall "static notmuch.h notmuch_message_get_tags"
   f_notmuch_message_get_tags :: Ptr (S__notmuch_message) -> IO (Ptr (S__notmuch_tags))
-
---
 
 foreign import ccall "static notmuch.h notmuch_message_add_tag"
   f_notmuch_message_add_tag :: Ptr (S__notmuch_message) -> Ptr (CChar) -> IO (CInt)
 
---
-
 foreign import ccall "static notmuch.h notmuch_message_remove_tag"
   f_notmuch_message_remove_tag :: Ptr (S__notmuch_message) -> Ptr (CChar) -> IO (CInt)
-
---
 
 foreign import ccall "static notmuch.h notmuch_message_remove_all_tags"
   f_notmuch_message_remove_all_tags :: Ptr (S__notmuch_message) -> IO (CInt)
 
---
-
 foreign import ccall "static notmuch.h notmuch_message_freeze"
   f_notmuch_message_freeze :: Ptr (S__notmuch_message) -> IO (CInt)
-
---
 
 foreign import ccall "static notmuch.h notmuch_message_thaw"
   f_notmuch_message_thaw :: Ptr (S__notmuch_message) -> IO (CInt)
 
---
-
 foreign import ccall "static notmuch.h notmuch_message_destroy"
   f_notmuch_message_destroy :: Ptr (S__notmuch_message) -> IO (())
-
---
 
 foreign import ccall "static notmuch.h notmuch_tags_has_more"
   f_notmuch_tags_has_more :: Ptr (S__notmuch_tags) -> IO (CInt)
 
---
-
 foreign import ccall "static notmuch.h notmuch_tags_get"
   f_notmuch_tags_get :: Ptr (S__notmuch_tags) -> IO (Ptr (CChar))
-
---
 
 foreign import ccall "static notmuch.h notmuch_tags_advance"
   f_notmuch_tags_advance :: Ptr (S__notmuch_tags) -> IO (())
 
---
-
 foreign import ccall "static notmuch.h notmuch_tags_destroy"
   f_notmuch_tags_destroy :: Ptr (S__notmuch_tags) -> IO (())
-
---
 
 foreign import ccall "static notmuch.h notmuch_directory_set_mtime"
   f_notmuch_directory_set_mtime :: Ptr (S__notmuch_directory) -> CTime -> IO (CInt)
 
---
-
 foreign import ccall "static notmuch.h notmuch_directory_get_mtime"
   f_notmuch_directory_get_mtime :: Ptr (S__notmuch_directory) -> IO (CTime)
-
---
 
 foreign import ccall "static notmuch.h notmuch_directory_get_child_files"
   f_notmuch_directory_get_child_files :: Ptr (S__notmuch_directory) -> IO (Ptr (S__notmuch_filenames))
 
---
-
 foreign import ccall "static notmuch.h notmuch_directory_get_child_directories"
   f_notmuch_directory_get_child_directories :: Ptr (S__notmuch_directory) -> IO (Ptr (S__notmuch_filenames))
-
---
 
 foreign import ccall "static notmuch.h notmuch_directory_destroy"
   f_notmuch_directory_destroy :: Ptr (S__notmuch_directory) -> IO (())
 
---
-
 foreign import ccall "static notmuch.h notmuch_filenames_has_more"
   f_notmuch_filenames_has_more :: Ptr (S__notmuch_filenames) -> IO (CInt)
-
---
 
 foreign import ccall "static notmuch.h notmuch_filenames_get"
   f_notmuch_filenames_get :: Ptr (S__notmuch_filenames) -> IO (Ptr (CChar))
 
---
-
 foreign import ccall "static notmuch.h notmuch_filenames_advance"
   f_notmuch_filenames_advance :: Ptr (S__notmuch_filenames) -> IO (())
 
---
-
 foreign import ccall "static notmuch.h notmuch_filenames_destroy"
   f_notmuch_filenames_destroy :: Ptr (S__notmuch_filenames) -> IO (())
-
---
-
-
--- Split end
-
