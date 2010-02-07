@@ -1,4 +1,7 @@
 import IO
 import Notmuch
 
-main = putStrLn $ statusToString StatusUnbalancedFreezeThaw
+main = do
+  putStrLn $ statusToString StatusUnbalancedFreezeThaw
+  db <- databaseCreate "/tmp"
+  return ()
