@@ -55,3 +55,8 @@ databaseOpen name databaseMode = do
 
 databaseClose :: Database -> IO ()
 databaseClose db = f_notmuch_database_close db
+
+databaseGetPath :: Database -> IO String
+databaseGetPath db = do
+  cs <- f_notmuch_database_get_path db
+  peekCString cs
