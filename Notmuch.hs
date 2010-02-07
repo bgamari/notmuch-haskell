@@ -60,3 +60,15 @@ databaseGetPath :: Database -> IO String
 databaseGetPath db = do
   cs <- f_notmuch_database_get_path db
   peekCString cs
+
+databaseGetVersion :: Database -> IO Int
+databaseGetVersion db = do
+  v <- f_notmuch_database_get_version db
+  return $ fromIntegral v
+
+databaseNeedsUpgrade :: Database -> IO Bool
+databaseNeedsUpgrade db = do
+  ug <- f_notmuch_database_needs_upgrade db
+  case ug of
+    0 -> return False
+    _ -> return True

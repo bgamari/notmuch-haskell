@@ -12,5 +12,10 @@ main = do
   db <- databaseOpen "/tmp" DatabaseModeReadOnly
   dbPath <- databaseGetPath db
   putStrLn $ "database is at " ++ dbPath
+  version <- databaseGetVersion db
+  putStrLn $ "version is " ++ show version
+  upgrade <- databaseNeedsUpgrade db
+  when upgrade $
+       putStrLn "database needs upgrade"
   databaseClose db
   return ()
