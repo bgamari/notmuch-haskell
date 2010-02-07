@@ -5,6 +5,9 @@ import NOTMUCH_H
 
 import Control.Monad
 
+-- XXX deriving Enum will only work if these fields are in
+-- the same order as in notmuch.h and there are no gaps
+-- there
 data Status = 
   StatusSuccess |
   StatusOutOfMemory |
@@ -33,6 +36,9 @@ databaseCreate name = do
        fail "database create failed"
   return db
 
+-- XXX deriving Enum will only work if these fields are in
+-- the same order as in notmuch.h and there are no gaps
+-- there
 data DatabaseMode = 
     DatabaseModeReadOnly |
     DatabaseModeReadWrite
@@ -46,3 +52,6 @@ databaseOpen name databaseMode = do
   when (db == nullPtr) $
        fail "database open failed"
   return db
+
+databaseClose :: Database -> IO ()
+databaseClose db = f_notmuch_database_close db
