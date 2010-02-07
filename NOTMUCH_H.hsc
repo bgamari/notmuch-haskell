@@ -17,114 +17,6 @@
 #include <stdarg.h>
 #include <ctype.h>
 
-#ifndef __quote__
-#define __quote__(x...) x
-#endif
-
-#ifndef offsetof
-#define offsetof(t, f) ((size_t) &((t *)0)->f)
-#endif
-
-
-#if __NHC__
-#define hsc_line(line, file) \
-    printf ("# %d \"%s\"\n", line, file);
-#else
-#define hsc_line(line, file) \
-    printf ("{-# LINE %d \"%s\" #-}\n", line, file);
-#endif
-
-#define hsc_const(x)                        \
-    if ((x) < 0)                            \
-        printf ("%ld", (long)(x));          \
-    else                                    \
-        printf ("%lu", (unsigned long)(x));
-
-#define hsc_const_str(x)                                          \
-    {                                                             \
-        const char *s = (x);                                      \
-        printf ("\"");                                            \
-        while (*s != '\0')                                        \
-        {                                                         \
-            if (*s == '"' || *s == '\\')                          \
-                printf ("\\%c", *s);                              \
-            else if (*s >= 0x20 && *s <= 0x7E)                    \
-                printf ("%c", *s);                                \
-            else                                                  \
-                printf ("\\%d%s",                                 \
-                        (unsigned char) *s,                       \
-                        s[1] >= '0' && s[1] <= '9' ? "\\&" : ""); \
-            ++s;                                                  \
-        }                                                         \
-        printf ("\"");                                            \
-    }
-
-#define hsc_type(t)                                         \
-    if ((t)(int)(t)1.4 == (t)1.4)                           \
-        printf ("%s%d",                                     \
-                (t)(-1) < (t)0 ? "Int" : "Word",            \
-                sizeof (t) * 8);                            \
-    else                                                    \
-        printf ("%s",                                       \
-                sizeof (t) >  sizeof (double) ? "LDouble" : \
-                sizeof (t) == sizeof (double) ? "Double"  : \
-                "Float");
-
-#ifndef hsc_peek
-#define hsc_peek(t, f) \
-    printf ("(\\hsc_ptr -> peekByteOff hsc_ptr %ld)", (long) offsetof (__quote__(t), f));
-#endif
-
-#ifndef hsc_poke
-#define hsc_poke(t, f) \
-    printf ("(\\hsc_ptr -> pokeByteOff hsc_ptr %ld)", (long) offsetof (__quote__(t), f));
-#endif
-           
-#ifndef hsc_ptr
-#define hsc_ptr(t, f) \
-    printf ("(\\hsc_ptr -> hsc_ptr `plusPtr` %ld)", (long) offsetof (__quote__(t), f));
-#endif
-
-#ifndef hsc_offset
-#define hsc_offset(t, f) \
-    printf("(%ld)", (long) offsetof (__quote__(t), f));
-#endif
-
-#define hsc_size(t) \
-    printf("(%ld)", (long) sizeof(t));
-
-#define hsc_enum(t, f, print_name, x)         \
-    print_name;                               \
-    printf (" :: %s\n", #t);                  \
-    print_name;                               \
-    printf (" = %s ", #f);                    \
-    if ((x) < 0)                              \
-        printf ("(%ld)\n", (long)(x));        \
-    else                                      \
-        printf ("%lu\n", (unsigned long)(x));
-
-#define hsc_haskellize(x)                                          \
-    {                                                              \
-        const char *s = (x);                                       \
-        int upper = 0;                                             \
-        if (*s != '\0')                                            \
-        {                                                          \
-            putchar (tolower (*s));                                \
-            ++s;                                                   \
-            while (*s != '\0')                                     \
-            {                                                      \
-                if (*s == '_')                                     \
-                    upper = 1;                                     \
-                else                                               \
-                {                                                  \
-                    putchar (upper ? toupper (*s) : tolower (*s)); \
-                    upper = 0;                                     \
-                }                                                  \
-                ++s;                                               \
-            }                                                      \
-        }                                                          \
-    }
-
 #def void _dummy_force_NOTMUCH_H_hsc_c (void) { }
 
 {-# OPTIONS -fglasgow-exts -XForeignFunctionInterface #-}
@@ -172,22 +64,22 @@ newtype S__notmuch_thread = S__notmuch_thread ()
 newtype S__notmuch_threads = S__notmuch_threads ()
 
 e_NOTMUCH_DATABASE_MODE_READ_ONLY = #const  0 
-e_NOTMUCH_DATABASE_MODE_READ_WRITE = #const ( 0 ) + 1
+e_NOTMUCH_DATABASE_MODE_READ_WRITE = #const 1
 e_NOTMUCH_SORT_OLDEST_FIRST = #const 0
-e_NOTMUCH_SORT_NEWEST_FIRST = #const (0) + 1
-e_NOTMUCH_SORT_MESSAGE_ID = #const ((0) + 1) + 1
+e_NOTMUCH_SORT_NEWEST_FIRST = #const 1
+e_NOTMUCH_SORT_MESSAGE_ID = #const 2
 e_NOTMUCH_MESSAGE_FLAG_MATCH = #const 0
 e_NOTMUCH_STATUS_SUCCESS = #const  0 
-e_NOTMUCH_STATUS_OUT_OF_MEMORY = #const ( 0 ) + 1
-e_NOTMUCH_STATUS_READ_ONLY_DATABASE = #const (( 0 ) + 1) + 1
-e_NOTMUCH_STATUS_XAPIAN_EXCEPTION = #const ((( 0 ) + 1) + 1) + 1
-e_NOTMUCH_STATUS_FILE_ERROR = #const (((( 0 ) + 1) + 1) + 1) + 1
-e_NOTMUCH_STATUS_FILE_NOT_EMAIL = #const ((((( 0 ) + 1) + 1) + 1) + 1) + 1
-e_NOTMUCH_STATUS_DUPLICATE_MESSAGE_ID = #const (((((( 0 ) + 1) + 1) + 1) + 1) + 1) + 1
-e_NOTMUCH_STATUS_NULL_POINTER = #const ((((((( 0 ) + 1) + 1) + 1) + 1) + 1) + 1) + 1
-e_NOTMUCH_STATUS_TAG_TOO_LONG = #const (((((((( 0 ) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1
-e_NOTMUCH_STATUS_UNBALANCED_FREEZE_THAW = #const ((((((((( 0 ) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1
-e_NOTMUCH_STATUS_LAST_STATUS = #const (((((((((( 0 ) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1
+e_NOTMUCH_STATUS_OUT_OF_MEMORY = #const 1
+e_NOTMUCH_STATUS_READ_ONLY_DATABASE = #const 2
+e_NOTMUCH_STATUS_XAPIAN_EXCEPTION = #const 3
+e_NOTMUCH_STATUS_FILE_ERROR = #const 4
+e_NOTMUCH_STATUS_FILE_NOT_EMAIL = #const 5
+e_NOTMUCH_STATUS_DUPLICATE_MESSAGE_ID = #const 6
+e_NOTMUCH_STATUS_NULL_POINTER = #const 7
+e_NOTMUCH_STATUS_TAG_TOO_LONG = #const 8
+e_NOTMUCH_STATUS_UNBALANCED_FREEZE_THAW = #const 9
+e_NOTMUCH_STATUS_LAST_STATUS = #const 10
 
 foreign import ccall "static notmuch.h notmuch_status_to_string"
   f_notmuch_status_to_string :: CInt -> IO (Ptr (CChar))
