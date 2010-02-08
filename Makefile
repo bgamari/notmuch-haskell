@@ -11,5 +11,5 @@ NOTMUCH_H_hsc.c NOTMUCH_H_hsc.h: NOTMUCH_H.hsc
 NOTMUCH_H_hsc.o: NOTMUCH_H_hsc.c NOTMUCH_H_hsc.h
 	ghc --make NOTMUCH_H_hsc.c
 
-Notmuch.o Notmuch.hi: Notmuch.hs
+Notmuch.o Notmuch.hi: Notmuch.hs NOTMUCH_H_hsc.o
 	ghc --make Notmuch.hs
