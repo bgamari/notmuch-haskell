@@ -72,16 +72,13 @@ databaseGetVersion db = do
   v <- f_notmuch_database_get_version db
   return $ fromIntegral v
 
-resultBool :: IO CInt -> IO Bool
-resultBool a = do
-  cb <- a
-  case cb of
-    0 -> return False
-    _ -> return True
+resultBool :: CInt -> IO Bool
+resultBool 0 = return False
+resultBool _ = return True
 
 databaseNeedsUpgrade :: Database -> IO Bool
-databaseNeedsUpgrade =
-  resultBool . f_notmuch_database_needs_upgrade
+databaseNeedsUpgrade db =
+  f_notmuch_database_needs_upgrade db >>= resultBool
 
 statusCheck :: CInt -> IO ()
 statusCheck 0 = return ()
@@ -158,25 +155,28 @@ iterM coln test get = do
       return $ elem : rest
     False -> return []
 
-unpackTags :: Ptr S__notmuch_tags -> IO [String]
-unpackTags tags =
-    iterM tags test get
+iterUnpack :: Ptr a -> (Ptr a -> IO Bool) ->
+              (Ptr a -> IO b) -> (Ptr a -> IO ()) ->
+              IO [b]
+iterUnpack coln f_has_more f_get f_advance =
+    iterM coln f_has_more get
     where
-      test tags' =
-        resultBool $ f_notmuch_tags_has_more tags'
-      get tags' = do
-        tag <- f_notmuch_tags_get tags'
-        f_notmuch_tags_advance tags'
-        peekCString tag
+      get coln' = do
+        e <- f_get coln'
+        f_advance coln'
+        return e
 
 databaseGetAllTags :: Database -> IO [String]
 databaseGetAllTags db = do
   tags <- f_notmuch_database_get_all_tags db
   when (tags == nullPtr) $
        fail "database get all tags failed"
-  unpackTags tags
-
-
+  result <- iterUnpack tags
+            (\t -> f_notmuch_tags_has_more t >>= resultBool)
+            (\t -> f_notmuch_tags_get t >>= peekCString)
+            f_notmuch_tags_advance
+  f_notmuch_tags_destroy tags
+  return result
 
 type Query = ForeignPtr S__notmuch_query
 
@@ -202,3 +202,20 @@ querySetSortOrder query sortOrder =
             f_notmuch_query_set_sort query' $
             fromIntegral $ fromEnum sortOrder in
     withForeignPtr query setSort
+
+type Threads = Ptr S__notmuch_threads
+
+type Thread = ForeignPtr S__notmuch_thread
+
+queryThreads :: Query -> IO [Thread]
+queryThreads query = do
+  threads <- withForeignPtr query f_notmuch_query_search_threads
+  when (threads == nullPtr) $
+       fail "query threads failed"
+  result <- iterUnpack threads
+            (\t -> f_notmuch_threads_has_more t >>= resultBool)
+            (\t -> f_notmuch_threads_get t >>=
+                   newForeignPtr pf_notmuch_thread_destroy)
+            f_notmuch_threads_advance
+  f_notmuch_threads_destroy threads
+  return result
