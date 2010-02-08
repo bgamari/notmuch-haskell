@@ -1,3 +1,6 @@
+-- Copyright © 2010 Bart Massey
+-- notmuch mail library high-level interface
+
 module Notmuch
 where
 
@@ -5,12 +8,10 @@ import NOTMUCH_H
 
 import Control.Monad
 
-requiredDatabaseVersion :: Int
-requiredDatabaseVersion = 1
-
 -- XXX Deriving Enum will only work if these fields are in
 -- the same order as in notmuch.h and there are no gaps
 -- there.
+
 -- XXX This should probably be thrown away as hidden
 -- internally.
 data Status = 
@@ -171,5 +172,33 @@ unpackTags tags =
 databaseGetAllTags :: Database -> IO [String]
 databaseGetAllTags db = do
   tags <- f_notmuch_database_get_all_tags db
+  when (tags == nullPtr) $
+       fail "database get all tags failed"
   unpackTags tags
 
+
+
+type Query = ForeignPtr S__notmuch_query
+
+queryCreate :: Database -> String -> IO Query
+queryCreate db queryString = do
+    query <- withCString queryString $ f_notmuch_query_create db
+    when (query == nullPtr) $
+         fail "query create failed"
+    newForeignPtr pf_notmuch_query_destroy query
+
+-- XXX Deriving Enum will only work if these fields are in
+-- the same order as in notmuch.h and there are no gaps
+-- there.
+data SortOrder = 
+    SortOldestFirst |
+    SortNewestFirst |
+    SortMessageID
+    deriving Enum
+
+querySetSortOrder :: Query -> SortOrder -> IO ()
+querySetSortOrder query sortOrder =
+    let setSort query' =
+            f_notmuch_query_set_sort query' $
+            fromIntegral $ fromEnum sortOrder in
+    withForeignPtr query setSort
