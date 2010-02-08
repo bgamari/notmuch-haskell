@@ -219,3 +219,28 @@ queryThreads query = do
             f_notmuch_threads_advance
   f_notmuch_threads_destroy threads
   return result
+
+queryMessages :: Query -> IO [Message]
+queryMessages query = do
+  messages <- withForeignPtr query f_notmuch_query_search_messages
+  when (messages == nullPtr) $
+       fail "query messages failed"
+  result <- iterUnpack messages
+            (\t -> f_notmuch_messages_has_more t >>= resultBool)
+            (\t -> f_notmuch_messages_get t >>=
+                   newForeignPtr pf_notmuch_message_destroy)
+            f_notmuch_messages_advance
+  f_notmuch_messages_destroy messages
+  return result
+
+queryCountMessages :: Query -> IO Int
+queryCountMessages query = withForeignPtr query $
+    (\q -> f_notmuch_query_count_messages q >>= return . fromIntegral)
+
+getThreadID :: Thread -> IO String
+getThreadID thread = withForeignPtr thread $
+    (\t -> f_notmuch_thread_get_thread_id t >>= peekCString)
+
+threadCountMessages :: Thread -> IO Int
+threadCountMessages thread = withForeignPtr thread $
+    (\t -> f_notmuch_thread_get_total_messages t >>= return . fromIntegral)
