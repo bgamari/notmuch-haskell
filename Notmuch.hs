@@ -71,13 +71,16 @@ databaseGetVersion db = do
   v <- f_notmuch_database_get_version db
   return $ fromIntegral v
 
-databaseNeedsUpgrade :: Database -> IO Bool
-databaseNeedsUpgrade db = do
-  ug <- f_notmuch_database_needs_upgrade db
-  case ug of
+resultBool :: IO CInt -> IO Bool
+resultBool a = do
+  cb <- a
+  case cb of
     0 -> return False
     _ -> return True
 
+databaseNeedsUpgrade :: Database -> IO Bool
+databaseNeedsUpgrade =
+  resultBool . f_notmuch_database_needs_upgrade
 
 statusCheck :: CInt -> IO ()
 statusCheck 0 = return ()
@@ -144,3 +147,29 @@ databaseFindMessage db msgid = do
        fail "database find message failed"
   newForeignPtr pf_notmuch_message_destroy cmsg
   
+iterM :: Monad m => a -> (a -> m Bool) -> (a -> m b) -> m [b]
+iterM coln test get = do
+  cont <- test coln
+  case cont of
+    True -> do
+      elem <- get coln
+      rest <- iterM coln test get
+      return $ elem : rest
+    False -> return []
+
+unpackTags :: Ptr S__notmuch_tags -> IO [String]
+unpackTags tags =
+    iterM tags test get
+    where
+      test tags' =
+        resultBool $ f_notmuch_tags_has_more tags'
+      get tags' = do
+        tag <- f_notmuch_tags_get tags'
+        f_notmuch_tags_advance tags'
+        peekCString tag
+
+databaseGetAllTags :: Database -> IO [String]
+databaseGetAllTags db = do
+  tags <- f_notmuch_database_get_all_tags db
+  unpackTags tags
+
