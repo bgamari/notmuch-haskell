@@ -242,6 +242,9 @@ foreign import ccall "static notmuch.h notmuch_message_thaw"
 foreign import ccall "static notmuch.h notmuch_message_destroy"
   f_notmuch_message_destroy :: Ptr (S__notmuch_message) -> IO (())
 
+foreign import ccall "static notmuch.h &notmuch_message_destroy"
+  pf_notmuch_message_destroy :: FunPtr (Ptr (S__notmuch_message) -> IO (()))
+
 foreign import ccall "static notmuch.h notmuch_tags_has_more"
   f_notmuch_tags_has_more :: Ptr (S__notmuch_tags) -> IO (CInt)
 
