@@ -105,6 +105,8 @@ databaseGetDirectory :: Database -> String -> IO Directory
 databaseGetDirectory db path =
     withCString path $ f_notmuch_database_get_directory db
   
+type Messages = Ptr S__notmuch_messages
+
 type Message = ForeignPtr S__notmuch_message
 
 -- XXX We provide no way to request a null message pointer,
@@ -220,11 +222,8 @@ queryThreads query = do
   f_notmuch_threads_destroy threads
   return result
 
-queryMessages :: Query -> IO [Message]
-queryMessages query = do
-  messages <- withForeignPtr query f_notmuch_query_search_messages
-  when (messages == nullPtr) $
-       fail "query messages failed"
+unpackMessages :: Messages -> IO [Message]
+unpackMessages messages = do
   result <- iterUnpack messages
             (\t -> f_notmuch_messages_has_more t >>= resultBool)
             (\t -> f_notmuch_messages_get t >>=
@@ -232,6 +231,13 @@ queryMessages query = do
             f_notmuch_messages_advance
   f_notmuch_messages_destroy messages
   return result
+
+queryMessages :: Query -> IO [Message]
+queryMessages query = do
+  messages <- withForeignPtr query f_notmuch_query_search_messages
+  when (messages == nullPtr) $
+       fail "query messages failed"
+  unpackMessages messages
 
 queryCountMessages :: Query -> IO Int
 queryCountMessages query = withForeignPtr query $
@@ -244,3 +250,14 @@ getThreadID thread = withForeignPtr thread $
 threadCountMessages :: Thread -> IO Int
 threadCountMessages thread = withForeignPtr thread $
     (\t -> f_notmuch_thread_get_total_messages t >>= return . fromIntegral)
+
+threadCountMatchedMessages :: Thread -> IO Int
+threadCountMatchedMessages thread = withForeignPtr thread $
+    (\t -> f_notmuch_thread_get_matched_messages t >>= return . fromIntegral)
+
+threadGetToplevelMessages :: Thread -> IO [Message]
+threadGetToplevelMessages thread = do
+  messages <- withForeignPtr thread f_notmuch_thread_get_toplevel_messages
+  when (messages == nullPtr) $
+       fail "thread get top-level messages failed"
+  unpackMessages messages
