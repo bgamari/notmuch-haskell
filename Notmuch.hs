@@ -42,28 +42,34 @@ databaseClose :: Database -> IO ()
 databaseClose db = f_notmuch_database_close db
 
 databaseGetPath :: Database -> IO FilePath
-databaseGetPath db = do
-  cs <- f_notmuch_database_get_path db
-  peekCString cs
+databaseGetPath db =
+    resultString $ f_notmuch_database_get_path db
 
 databaseGetVersion :: Database -> IO Int
 databaseGetVersion db = do
   v <- f_notmuch_database_get_version db
   return $ fromIntegral v
 
-resultBool :: CInt -> IO Bool
-resultBool 0 = return False
-resultBool _ = return True
+resultBool :: IO CInt -> IO Bool
+resultBool = fmap (/= 0)
+
+resultString :: IO (Ptr CChar) -> IO String
+resultString = (>>= peekCString)
+
+resultInt :: IO CInt -> IO Int
+resultInt = fmap fromIntegral
+
+resultWord :: IO CUInt -> IO Word
+resultWord = fmap fromIntegral
 
 databaseNeedsUpgrade :: Database -> IO Bool
 databaseNeedsUpgrade db =
-  f_notmuch_database_needs_upgrade db >>= resultBool
+    resultBool $ f_notmuch_database_needs_upgrade db
 
 statusCheck :: CInt -> IO ()
 statusCheck 0 = return ()
 statusCheck s = do
-  cs <- f_notmuch_status_to_string s
-  msg <- peekCString cs
+  msg <- resultString $ f_notmuch_status_to_string s
   fail msg
 
 type UpgradeCallback = String -> Double -> IO ()
@@ -141,12 +147,13 @@ iterM coln test get = do
       return $ elem : rest
     False -> return []
 
-iterUnpack :: Ptr a -> (Ptr a -> IO Bool) ->
+iterUnpack :: Ptr a -> (Ptr a -> IO CInt) ->
               (Ptr a -> IO b) -> (Ptr a -> IO ()) ->
               IO [b]
 iterUnpack coln f_has_more f_get f_advance =
-    iterM coln f_has_more get
+    iterM coln has_more get
     where
+      has_more = resultBool . f_has_more
       get coln' = do
         e <- f_get coln'
         f_advance coln'
@@ -159,8 +166,8 @@ type Tags = [String]
 unpackTags :: CTags -> IO Tags
 unpackTags tags = do
   result <- iterUnpack tags
-            (\t -> f_notmuch_tags_has_more t >>= resultBool)
-            (\t -> f_notmuch_tags_get t >>= peekCString)
+            f_notmuch_tags_has_more
+            (resultString . f_notmuch_tags_get)
             f_notmuch_tags_advance
   f_notmuch_tags_destroy tags
   return result
@@ -208,7 +215,7 @@ queryThreads query = withForeignPtr query $ (\q -> do
   when (threads == nullPtr) $
        fail "query threads failed"
   result <- iterUnpack threads
-            (\t -> f_notmuch_threads_has_more t >>= resultBool)
+            f_notmuch_threads_has_more
             (\t -> f_notmuch_threads_get t >>=
                    newForeignPtr pf_notmuch_thread_destroy)
             f_notmuch_threads_advance
@@ -218,7 +225,7 @@ queryThreads query = withForeignPtr query $ (\q -> do
 unpackMessages :: CMessages -> IO Messages
 unpackMessages messages = do
   result <- iterUnpack messages
-            (\t -> f_notmuch_messages_has_more t >>= resultBool)
+            f_notmuch_messages_has_more
             (\t -> f_notmuch_messages_get t >>=
                    newForeignPtr pf_notmuch_message_destroy)
             f_notmuch_messages_advance
@@ -232,21 +239,21 @@ queryMessages query = withForeignPtr query $ (\q -> do
        fail "query messages failed"
   unpackMessages messages)
 
-queryCountMessages :: Query -> IO Int
+queryCountMessages :: Query -> IO Word
 queryCountMessages query = withForeignPtr query $
-    (\q -> f_notmuch_query_count_messages q >>= return . fromIntegral)
+    resultWord . f_notmuch_query_count_messages
 
 getThreadID :: Thread -> IO String
 getThreadID thread = withForeignPtr thread $
-    (\t -> f_notmuch_thread_get_thread_id t >>= peekCString)
+    resultString . f_notmuch_thread_get_thread_id
 
 threadCountMessages :: Thread -> IO Int
 threadCountMessages thread = withForeignPtr thread $
-    (\t -> f_notmuch_thread_get_total_messages t >>= return . fromIntegral)
+    resultInt . f_notmuch_thread_get_total_messages
 
 threadCountMatchedMessages :: Thread -> IO Int
 threadCountMatchedMessages thread = withForeignPtr thread $
-    (\t -> f_notmuch_thread_get_matched_messages t >>= return . fromIntegral)
+    resultInt . f_notmuch_thread_get_matched_messages
 
 threadGetToplevelMessages :: Thread -> IO Messages
 threadGetToplevelMessages thread = withForeignPtr thread $ (\t -> do
@@ -334,8 +341,8 @@ data MessageFlag =
 messageGetFlag :: Message -> MessageFlag -> IO Bool
 messageGetFlag message flag =
     let cflag = fromIntegral $ fromEnum flag in
-    withForeignPtr message $ (\m ->
-      f_notmuch_message_get_flag m cflag >>= resultBool)
+    withForeignPtr message $ 
+      resultBool . (\m -> f_notmuch_message_get_flag m cflag)
 
 messageSetFlag :: Message -> MessageFlag -> Bool -> IO ()
 messageSetFlag message flag sense =
@@ -350,9 +357,8 @@ messageGetDate message = withForeignPtr message $ (\m -> do
   return $ posixSecondsToUTCTime $ realToFrac date)
 
 messageGetHeader :: Message -> String -> IO String
-messageGetHeader message header = withForeignPtr message $ (\m -> do
-  hval <- withCString header $ f_notmuch_message_get_header m
-  peekCString hval)
+messageGetHeader message header = withForeignPtr message (\m ->
+  withCString header (resultString . f_notmuch_message_get_header m))
 
 messageGetTags :: Message -> IO Tags
 messageGetTags message = withForeignPtr message $ (\m -> do
@@ -405,7 +411,6 @@ directoryGetChildFiles :: Directory -> IO [FilePath]
 directoryGetChildFiles dir = do
   filenames <- f_notmuch_directory_get_child_files dir
   iterUnpack filenames
-    (\t -> f_notmuch_filenames_has_more t >>= resultBool)
-    (\t -> f_notmuch_filenames_get t >>= peekCString)
+    f_notmuch_filenames_has_more
+    (resultString . f_notmuch_filenames_get)
     f_notmuch_filenames_advance
-  
