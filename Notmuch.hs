@@ -366,7 +366,15 @@ messageSetFlag message flag sense =
     withForeignPtr message $ (\m ->
       f_notmuch_message_set_flag m cflag csense)
 
--- HERE
+messageGetDate :: Message -> IO UTCTime
+messageGetDate message = withForeignPtr message $ (\m -> do
+  date <- f_notmuch_message_get_date m
+  return $ posixSecondsToUTCTime $ realToFrac date)
+
+messageGetHeader :: Message -> String -> IO String
+messageGetHeader message header = withForeignPtr message $ (\m -> do
+  hval <- withCString header $ f_notmuch_message_get_header m
+  peekCString hval)
 
 messageGetTags :: Message -> IO Tags
 messageGetTags message = withForeignPtr message $ (\m -> do

@@ -25,7 +25,6 @@
 
 module NOTMUCH_H(
   module NOTMUCH_H,
-  module HSFFIG.FieldAccess,
   module Foreign,
   module Foreign.C.String,
   module Foreign.C.Types) where
@@ -34,7 +33,6 @@ import Foreign
 import Foreign.Ptr
 import Foreign.C.Types
 import Foreign.C.String
-import HSFFIG.FieldAccess
 
 c_NOTMUCH_TAG_MAX = #const NOTMUCH_TAG_MAX
 
