@@ -10,6 +10,7 @@ import Control.Monad
 import Data.List
 import Data.Time
 import Data.Time.Clock.POSIX
+import System.FilePath
 
 -- XXX Deriving Enum will only work if these fields are in
 -- the same order as in notmuch.h and there are no gaps
@@ -38,7 +39,7 @@ statusToString status =
 
 type Database = Ptr S__notmuch_database
 
-databaseCreate :: String -> IO Database
+databaseCreate :: FilePath -> IO Database
 databaseCreate name = do
   db <- withCString name f_notmuch_database_create
   when (db == nullPtr) $
@@ -53,7 +54,7 @@ data DatabaseMode =
     DatabaseModeReadWrite
     deriving Enum
 
-databaseOpen :: String -> DatabaseMode -> IO Database
+databaseOpen :: FilePath -> DatabaseMode -> IO Database
 databaseOpen name databaseMode = do
   db <- withCString name $
         flip f_notmuch_database_open $
@@ -65,7 +66,7 @@ databaseOpen name databaseMode = do
 databaseClose :: Database -> IO ()
 databaseClose db = f_notmuch_database_close db
 
-databaseGetPath :: Database -> IO String
+databaseGetPath :: Database -> IO FilePath
 databaseGetPath db = do
   cs <- f_notmuch_database_get_path db
   peekCString cs
@@ -104,13 +105,15 @@ databaseUpgrade db Nothing = do
 
 type Directory = Ptr S__notmuch_directory
 
-databaseGetDirectory :: Database -> String -> IO Directory
+databaseGetDirectory :: Database -> FilePath -> IO Directory
 databaseGetDirectory db path =
     withCString path $ f_notmuch_database_get_directory db
   
-type Messages = Ptr S__notmuch_messages
+type CMessages = Ptr S__notmuch_messages
 
 type Message = ForeignPtr S__notmuch_message
+
+type Messages = [Message]
 
 -- XXX We provide no way to request a null message pointer,
 -- so the message is always returned.  The finalizer will
@@ -119,7 +122,7 @@ type Message = ForeignPtr S__notmuch_message
 -- XXX This function will fail on dup adds, rather than
 -- succeed.  I have no idea what it should do, and this
 -- was easiest.
-databaseAddMessage :: Database -> String -> IO Message
+databaseAddMessage :: Database -> FilePath -> IO Message
 databaseAddMessage db filename = alloca msgFun where
     msgFun msgPtr = do
       let addMessage fn =
@@ -132,7 +135,7 @@ databaseAddMessage db filename = alloca msgFun where
 -- XXX This function will fail on dup remove, rather than
 -- succeed.  I have no idea what it should do, and this
 -- was easiest.
-databaseRemoveMessage :: Database -> String -> IO ()
+databaseRemoveMessage :: Database -> FilePath -> IO ()
 databaseRemoveMessage db filename = do
   let removeMessage fn = f_notmuch_database_remove_message db fn
   s <- withCString filename removeMessage
@@ -171,9 +174,11 @@ iterUnpack coln f_has_more f_get f_advance =
         f_advance coln'
         return e
 
-type Tags = Ptr S__notmuch_tags
+type CTags = Ptr S__notmuch_tags
 
-unpackTags :: Tags -> IO [String]
+type Tags = [String]
+
+unpackTags :: CTags -> IO Tags
 unpackTags tags = do
   result <- iterUnpack tags
             (\t -> f_notmuch_tags_has_more t >>= resultBool)
@@ -183,7 +188,7 @@ unpackTags tags = do
   return result
 
 
-databaseGetAllTags :: Database -> IO [String]
+databaseGetAllTags :: Database -> IO Tags
 databaseGetAllTags db = do
   tags <- f_notmuch_database_get_all_tags db
   when (tags == nullPtr) $
@@ -232,7 +237,7 @@ queryThreads query = withForeignPtr query $ (\q -> do
   f_notmuch_threads_destroy threads
   return result)
 
-unpackMessages :: Messages -> IO [Message]
+unpackMessages :: CMessages -> IO Messages
 unpackMessages messages = do
   result <- iterUnpack messages
             (\t -> f_notmuch_messages_has_more t >>= resultBool)
@@ -242,7 +247,7 @@ unpackMessages messages = do
   f_notmuch_messages_destroy messages
   return result
 
-queryMessages :: Query -> IO [Message]
+queryMessages :: Query -> IO Messages
 queryMessages query = withForeignPtr query $ (\q -> do
   messages <- f_notmuch_query_search_messages q
   when (messages == nullPtr) $
@@ -265,7 +270,7 @@ threadCountMatchedMessages :: Thread -> IO Int
 threadCountMatchedMessages thread = withForeignPtr thread $
     (\t -> f_notmuch_thread_get_matched_messages t >>= return . fromIntegral)
 
-threadGetToplevelMessages :: Thread -> IO [Message]
+threadGetToplevelMessages :: Thread -> IO Messages
 threadGetToplevelMessages thread = withForeignPtr thread $ (\t -> do
   messages <- f_notmuch_thread_get_toplevel_messages t
   when (messages == nullPtr) $
@@ -300,7 +305,7 @@ threadGetNewestDate thread = withForeignPtr thread $ (\t -> do
   date <- f_notmuch_thread_get_newest_date t
   return $ posixSecondsToUTCTime $ realToFrac date)
 
-threadGetTags :: Thread -> IO [String]
+threadGetTags :: Thread -> IO Tags
 threadGetTags thread = withForeignPtr thread $ (\t -> do
   tags <-  f_notmuch_thread_get_tags t
   when (tags == nullPtr) $
@@ -310,7 +315,7 @@ threadGetTags thread = withForeignPtr thread $ (\t -> do
 -- XXX Because of the peculiar way this is implemented and
 -- interfaced in notmuch, we provide a Haskell re-implementation
 -- instead of trying to use the underlying native function.
-messagesCollectTags :: [Message] -> IO [String]
+messagesCollectTags :: Messages -> IO Tags
 messagesCollectTags messages = do
   tagses <- mapM messageGetTags messages
   return $ nub $ concat tagses
@@ -323,7 +328,47 @@ messageGetMessageID message = withForeignPtr message $ (\m -> do
   peekCString msgid)
   
 
-messageGetTags :: Message -> IO [String]
+messageGetThreadID :: Message -> IO String
+messageGetThreadID message = withForeignPtr message $ (\m -> do
+  tid <- f_notmuch_message_get_thread_id m
+  when (tid == nullPtr) $
+       fail "message get thread ID failed"
+  peekCString tid)
+  
+messageGetReplies :: Message -> IO Messages
+messageGetReplies message = withForeignPtr message $ (\m -> do
+  messages <- f_notmuch_message_get_replies m
+  when (messages == nullPtr) $
+       fail "message get replies failed"
+  unpackMessages messages)
+  
+messageGetFilePath :: Message -> IO FilePath
+messageGetFilePath message = withForeignPtr message $ (\m -> do
+  path <- f_notmuch_message_get_filename m
+  when (path == nullPtr) $
+       fail "message get file path failed"
+  peekCString path)
+
+data MessageFlag =
+    MessageFlagMatch
+    deriving Enum             
+
+messageGetFlag :: Message -> MessageFlag -> IO Bool
+messageGetFlag message flag =
+    let cflag = fromIntegral $ fromEnum flag in
+    withForeignPtr message $ (\m ->
+      f_notmuch_message_get_flag m cflag >>= resultBool)
+
+messageSetFlag :: Message -> MessageFlag -> Bool -> IO ()
+messageSetFlag message flag sense =
+    let cflag = fromIntegral $ fromEnum flag
+        csense = case sense of True -> 1; False -> 0 in
+    withForeignPtr message $ (\m ->
+      f_notmuch_message_set_flag m cflag csense)
+
+-- HERE
+
+messageGetTags :: Message -> IO Tags
 messageGetTags message = withForeignPtr message $ (\m -> do
   tags <- f_notmuch_message_get_tags m
   when (tags == nullPtr) $
