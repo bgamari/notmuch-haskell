@@ -12,31 +12,6 @@ import Data.Time
 import Data.Time.Clock.POSIX
 import System.FilePath
 
--- XXX Deriving Enum will only work if these fields are in
--- the same order as in notmuch.h and there are no gaps
--- there.
-
--- XXX This should probably be thrown away as hidden
--- internally.
-data Status = 
-  StatusSuccess |
-  StatusOutOfMemory |
-  StatusReadOnlyDatabase |
-  StatusXapianException |
-  StatusFileError |
-  StatusFileNotEmail |
-  StatusDuplicateMessageId |
-  StatusNullPointer |
-  StatusTagTooLong |
-  StatusUnbalancedFreezeThaw
-  deriving Enum
-
-statusToString :: Status -> String
-statusToString status =
-    unsafePerformIO $ do
-      cs <- f_notmuch_status_to_string $ fromIntegral $ fromEnum status
-      peekCString cs
-
 type Database = Ptr S__notmuch_database
 
 databaseCreate :: FilePath -> IO Database
@@ -86,7 +61,10 @@ databaseNeedsUpgrade db =
 
 statusCheck :: CInt -> IO ()
 statusCheck 0 = return ()
-statusCheck s = fail $ statusToString $ toEnum $ fromIntegral s
+statusCheck s = do
+  cs <- f_notmuch_status_to_string s
+  msg <- peekCString cs
+  fail msg
 
 type UpgradeCallback = String -> Double -> IO ()
 
@@ -382,3 +360,52 @@ messageGetTags message = withForeignPtr message $ (\m -> do
   when (tags == nullPtr) $
        fail "message get tags failed"
   unpackTags tags)
+
+messageAddTag :: Message -> String -> IO ()
+messageAddTag message tag = withForeignPtr message $ (\m -> do
+  s <- withCString tag $ f_notmuch_message_add_tag m
+  statusCheck s)
+
+messageRemoveTag :: Message -> String -> IO ()
+messageRemoveTag message tag = withForeignPtr message $ (\m -> do
+  s <- withCString tag $ f_notmuch_message_remove_tag m
+  statusCheck s)
+
+messageRemoveAllTags :: Message -> IO ()
+messageRemoveAllTags message = withForeignPtr message $ (\m -> do
+  s <- f_notmuch_message_remove_all_tags m
+  statusCheck s)
+
+messageFreeze :: Message -> IO ()
+messageFreeze message = withForeignPtr message $ (\m -> do
+  s <- f_notmuch_message_freeze m
+  statusCheck s)
+
+messageThaw :: Message -> IO ()
+messageThaw message = withForeignPtr message $ (\m -> do
+  s <- f_notmuch_message_thaw m
+  statusCheck s)
+
+directorySetMtime :: Directory -> UTCTime -> IO ()
+directorySetMtime dir time = do
+  let t = fromIntegral $ floor $ realToFrac $ utcTimeToPOSIXSeconds time
+  when (t <= 0) $
+       fail "directory set mtime with invalid mtime"
+  s <- f_notmuch_directory_set_mtime dir t
+  statusCheck s
+
+directoryGetMtime :: Directory -> IO UTCTime
+directoryGetMtime dir = do
+  t <- f_notmuch_directory_get_mtime dir
+  when (t <= 0) $
+       fail "directory get mtime failed"
+  return $ posixSecondsToUTCTime $ realToFrac t
+
+directoryGetChildFiles :: Directory -> IO [FilePath]
+directoryGetChildFiles dir = do
+  filenames <- f_notmuch_directory_get_child_files dir
+  iterUnpack filenames
+    (\t -> f_notmuch_filenames_has_more t >>= resultBool)
+    (\t -> f_notmuch_filenames_get t >>= peekCString)
+    f_notmuch_filenames_advance
+  

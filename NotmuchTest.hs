@@ -5,7 +5,6 @@ import System.Environment
     
 main = do
   argv <- getArgs
-  putStrLn $ statusToString StatusUnbalancedFreezeThaw
   when (length argv > 0) $ do
          db <- databaseCreate "/tmp"
          databaseClose db
