@@ -7,6 +7,9 @@ where
 import NOTMUCH_H
 
 import Control.Monad
+import Data.List
+import Data.Time
+import Data.Time.Clock.POSIX
 
 -- XXX Deriving Enum will only work if these fields are in
 -- the same order as in notmuch.h and there are no gaps
@@ -168,17 +171,24 @@ iterUnpack coln f_has_more f_get f_advance =
         f_advance coln'
         return e
 
-databaseGetAllTags :: Database -> IO [String]
-databaseGetAllTags db = do
-  tags <- f_notmuch_database_get_all_tags db
-  when (tags == nullPtr) $
-       fail "database get all tags failed"
+type Tags = Ptr S__notmuch_tags
+
+unpackTags :: Tags -> IO [String]
+unpackTags tags = do
   result <- iterUnpack tags
             (\t -> f_notmuch_tags_has_more t >>= resultBool)
             (\t -> f_notmuch_tags_get t >>= peekCString)
             f_notmuch_tags_advance
   f_notmuch_tags_destroy tags
   return result
+
+
+databaseGetAllTags :: Database -> IO [String]
+databaseGetAllTags db = do
+  tags <- f_notmuch_database_get_all_tags db
+  when (tags == nullPtr) $
+       fail "database get all tags failed"
+  unpackTags tags
 
 type Query = ForeignPtr S__notmuch_query
 
@@ -210,8 +220,8 @@ type Threads = Ptr S__notmuch_threads
 type Thread = ForeignPtr S__notmuch_thread
 
 queryThreads :: Query -> IO [Thread]
-queryThreads query = do
-  threads <- withForeignPtr query f_notmuch_query_search_threads
+queryThreads query = withForeignPtr query $ (\q -> do
+  threads <- f_notmuch_query_search_threads q
   when (threads == nullPtr) $
        fail "query threads failed"
   result <- iterUnpack threads
@@ -220,7 +230,7 @@ queryThreads query = do
                    newForeignPtr pf_notmuch_thread_destroy)
             f_notmuch_threads_advance
   f_notmuch_threads_destroy threads
-  return result
+  return result)
 
 unpackMessages :: Messages -> IO [Message]
 unpackMessages messages = do
@@ -233,11 +243,11 @@ unpackMessages messages = do
   return result
 
 queryMessages :: Query -> IO [Message]
-queryMessages query = do
-  messages <- withForeignPtr query f_notmuch_query_search_messages
+queryMessages query = withForeignPtr query $ (\q -> do
+  messages <- f_notmuch_query_search_messages q
   when (messages == nullPtr) $
        fail "query messages failed"
-  unpackMessages messages
+  unpackMessages messages)
 
 queryCountMessages :: Query -> IO Int
 queryCountMessages query = withForeignPtr query $
@@ -256,8 +266,66 @@ threadCountMatchedMessages thread = withForeignPtr thread $
     (\t -> f_notmuch_thread_get_matched_messages t >>= return . fromIntegral)
 
 threadGetToplevelMessages :: Thread -> IO [Message]
-threadGetToplevelMessages thread = do
-  messages <- withForeignPtr thread f_notmuch_thread_get_toplevel_messages
+threadGetToplevelMessages thread = withForeignPtr thread $ (\t -> do
+  messages <- f_notmuch_thread_get_toplevel_messages t
   when (messages == nullPtr) $
        fail "thread get top-level messages failed"
-  unpackMessages messages
+  unpackMessages messages)
+
+-- XXX This pretty clearly wants to return a list of authors
+-- rather than a string containing a comma-separated list of
+-- authors, but the underlying interface doesn't provide a
+-- way to do that.
+threadGetAuthors :: Thread -> IO String
+threadGetAuthors thread = withForeignPtr thread $ (\t -> do
+  authors <- f_notmuch_thread_get_authors t
+  when (authors == nullPtr) $
+       fail "thread get authors failed"
+  peekCString authors)
+
+threadGetSubject :: Thread -> IO String
+threadGetSubject thread = withForeignPtr thread $ (\t -> do
+  subject <- f_notmuch_thread_get_subject t
+  when (subject == nullPtr) $
+       fail "thread get subject failed"
+  peekCString subject)
+
+threadGetOldestDate :: Thread -> IO UTCTime
+threadGetOldestDate thread = withForeignPtr thread $ (\t -> do
+  date <- f_notmuch_thread_get_oldest_date t
+  return $ posixSecondsToUTCTime $ realToFrac date)
+
+threadGetNewestDate :: Thread -> IO UTCTime
+threadGetNewestDate thread = withForeignPtr thread $ (\t -> do
+  date <- f_notmuch_thread_get_newest_date t
+  return $ posixSecondsToUTCTime $ realToFrac date)
+
+threadGetTags :: Thread -> IO [String]
+threadGetTags thread = withForeignPtr thread $ (\t -> do
+  tags <-  f_notmuch_thread_get_tags t
+  when (tags == nullPtr) $
+       fail "thread get tags failed"
+  unpackTags tags)
+
+-- XXX Because of the peculiar way this is implemented and
+-- interfaced in notmuch, we provide a Haskell re-implementation
+-- instead of trying to use the underlying native function.
+messagesCollectTags :: [Message] -> IO [String]
+messagesCollectTags messages = do
+  tagses <- mapM messageGetTags messages
+  return $ nub $ concat tagses
+
+messageGetMessageID :: Message -> IO String
+messageGetMessageID message = withForeignPtr message $ (\m -> do
+  msgid <- f_notmuch_message_get_message_id m
+  when (msgid == nullPtr) $
+       fail "message get message ID failed"
+  peekCString msgid)
+  
+
+messageGetTags :: Message -> IO [String]
+messageGetTags message = withForeignPtr message $ (\m -> do
+  tags <- f_notmuch_message_get_tags m
+  when (tags == nullPtr) $
+       fail "message get tags failed"
+  unpackTags tags)
