@@ -414,3 +414,11 @@ directoryGetChildFiles dir = do
     f_notmuch_filenames_has_more
     (resultString . f_notmuch_filenames_get)
     f_notmuch_filenames_advance
+
+directoryGetChildDirectories :: Directory -> IO [FilePath]
+directoryGetChildDirectories dir = do
+  filenames <- f_notmuch_directory_get_child_directories dir
+  iterUnpack filenames
+    f_notmuch_filenames_has_more
+    (resultString . f_notmuch_filenames_get)
+    f_notmuch_filenames_advance
