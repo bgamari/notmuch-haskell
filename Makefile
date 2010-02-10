@@ -13,3 +13,9 @@ NOTMUCH_H_hsc.o: NOTMUCH_H_hsc.c NOTMUCH_H_hsc.h
 
 Notmuch.o Notmuch.hi: Notmuch.hs NOTMUCH_H_hsc.o
 	ghc --make Notmuch.hs
+
+clean:
+	-rm -f $(OBJS) NOTMUCH_H_hsc.[ch] NOTMUCH_H_stub.[cho] \
+	  NOTMUCH_H.o NOTMUCH_H.hs NOTMUCH_H.hi \
+          NotmuchTest.o NotmuchTest.hi \
+          notmuchtest
