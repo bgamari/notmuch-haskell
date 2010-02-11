@@ -276,6 +276,9 @@ foreign import ccall "static notmuch.h notmuch_directory_get_child_directories"
 foreign import ccall "static notmuch.h notmuch_directory_destroy"
   f_notmuch_directory_destroy :: Ptr (S__notmuch_directory) -> IO (())
 
+foreign import ccall "static notmuch.h & notmuch_directory_destroy"
+  pf_notmuch_directory_destroy :: FunPtr (Ptr (S__notmuch_directory) -> IO (()))
+
 foreign import ccall "static notmuch.h notmuch_filenames_has_more"
   f_notmuch_filenames_has_more :: Ptr (S__notmuch_filenames) -> IO (CInt)
 

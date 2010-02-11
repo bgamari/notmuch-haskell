@@ -87,11 +87,12 @@ databaseUpgrade db Nothing = do
   s <- f_notmuch_database_upgrade db nullFunPtr nullPtr
   statusCheck s
 
-type Directory = Ptr S__notmuch_directory
+type Directory = ForeignPtr S__notmuch_directory
 
 databaseGetDirectory :: Database -> FilePath -> IO Directory
-databaseGetDirectory db path =
-    withCString path $ f_notmuch_database_get_directory db
+databaseGetDirectory db path = withCString path $ (\p -> do
+  dir <- f_notmuch_database_get_directory db p
+  newForeignPtr pf_notmuch_directory_destroy dir)
   
 type CMessages = Ptr S__notmuch_messages
 
@@ -393,32 +394,32 @@ messageThaw message = withForeignPtr message $ (\m -> do
   statusCheck s)
 
 directorySetMtime :: Directory -> UTCTime -> IO ()
-directorySetMtime dir time = do
+directorySetMtime dir time = withForeignPtr dir $ (\d -> do
   let t = fromIntegral $ floor $ realToFrac $ utcTimeToPOSIXSeconds time
   when (t <= 0) $
        fail "directory set mtime with invalid mtime"
-  s <- f_notmuch_directory_set_mtime dir t
-  statusCheck s
+  s <- f_notmuch_directory_set_mtime d t
+  statusCheck s)
 
 directoryGetMtime :: Directory -> IO UTCTime
-directoryGetMtime dir = do
-  t <- f_notmuch_directory_get_mtime dir
+directoryGetMtime dir = withForeignPtr dir $ (\d -> do
+  t <- f_notmuch_directory_get_mtime d
   when (t <= 0) $
        fail "directory get mtime failed"
-  return $ posixSecondsToUTCTime $ realToFrac t
+  return $ posixSecondsToUTCTime $ realToFrac t)
 
 directoryGetChildFiles :: Directory -> IO [FilePath]
-directoryGetChildFiles dir = do
-  filenames <- f_notmuch_directory_get_child_files dir
+directoryGetChildFiles dir = withForeignPtr dir $ (\d -> do
+  filenames <- f_notmuch_directory_get_child_files d
   iterUnpack filenames
     f_notmuch_filenames_has_more
     (resultString . f_notmuch_filenames_get)
-    f_notmuch_filenames_advance
+    f_notmuch_filenames_advance)
 
 directoryGetChildDirectories :: Directory -> IO [FilePath]
-directoryGetChildDirectories dir = do
-  filenames <- f_notmuch_directory_get_child_directories dir
+directoryGetChildDirectories dir = withForeignPtr dir $ (\d -> do
+  filenames <- f_notmuch_directory_get_child_directories d
   iterUnpack filenames
     f_notmuch_filenames_has_more
     (resultString . f_notmuch_filenames_get)
-    f_notmuch_filenames_advance
+    f_notmuch_filenames_advance)
