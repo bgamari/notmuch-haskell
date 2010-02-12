@@ -29,8 +29,8 @@ main = do
   nquery <- queryCountMessages query
   putStrLn $ "subject:notmuch returns " ++ show nquery ++ " results..."
   threads <- queryThreads query
-  putStr $ show (length threads) ++ ": "
   nthreadss <- mapM threadCountMessages threads
+  putStr $ show (sum nthreadss) ++ "/" ++ show (length threads) ++ ": "
   print nthreadss
   let thread = last threads
   subject <- threadGetSubject thread
