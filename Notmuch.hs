@@ -96,7 +96,10 @@ databaseGetDirectory db path = withCString path $ (\p -> do
   
 type CMessages = Ptr S__notmuch_messages
 
-type Message = ForeignPtr S__notmuch_message
+data Message = QueryMessage { qp :: Query,
+                              mp :: ForeignPtr S__notmuch_message }
+             | ChildMessage { pp :: Message,
+                              mp :: ForeignPtr S__notmuch_message }
 
 type Messages = [Message]
 
