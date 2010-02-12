@@ -3,7 +3,11 @@ import Data.Time
 import IO
 import Notmuch
 import System.Environment
+import System.Locale
     
+dateString :: FormatTime t => t -> String
+dateString = formatTime defaultTimeLocale "%c"
+
 main = do
   argv <- getArgs
   db <- if (length argv == 0)
@@ -35,10 +39,11 @@ main = do
   let message = head messages
   subject' <- messageGetHeader message "Subject"
   putStrLn subject'
+  date' <- messageGetHeader message "Date"
+  putStrLn date'
   date <- messageGetDate message
-  print date
-  tz <- getTimeZone date
-  let localdate = utcToLocalTime tz date
-  print localdate
+  putStrLn $ dateString date
+  localdate <- utcToLocalZonedTime date
+  putStrLn $ dateString localdate
   databaseClose db
   return ()
