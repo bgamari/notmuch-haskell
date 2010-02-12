@@ -226,6 +226,7 @@ data Thread = QueryThread { qtpp :: Query,
                             tp :: ThreadPtr }
             | ThreadsThread { ttpp :: ThreadsRef,
                               tp :: ThreadPtr }
+
 type Threads = [Thread]
 
 queryThreads :: Query -> IO Threads
