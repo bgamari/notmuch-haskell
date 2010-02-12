@@ -242,22 +242,25 @@ queryThreads query = withForeignPtr query $ (\q -> do
             f_notmuch_threads_advance
   return $ map (ThreadsThread qts) result)
 
-unpackMessages :: MessagesPtr -> IO Messages
-unpackMessages messages = do
-  result <- iterUnpack messages
+unpackMessages :: MessagesRef -> IO Messages
+unpackMessages messages = withForeignPtr (msp messages) $ (\ms -> do
+  result <- iterUnpack ms
             f_notmuch_messages_has_more
-            (\t -> f_notmuch_messages_get t >>=
-                   newForeignPtr pf_notmuch_message_destroy)
+            (\t -> do
+               m <- f_notmuch_messages_get t
+               mp <- newForeignPtr pf_notmuch_message_destroy m
+               return $ MessagesMessage messages mp)
             f_notmuch_messages_advance
-  f_notmuch_messages_destroy messages
-  return result
+  return result)
 
 queryMessages :: Query -> IO Messages
 queryMessages query = withForeignPtr query $ (\q -> do
   messages <- f_notmuch_query_search_messages q
   when (messages == nullPtr) $
        fail "query messages failed"
-  unpackMessages messages)
+  ms <- newForeignPtr pf_notmuch_messages_destroy messages
+  let qms = QueryMessages query ms
+  unpackMessages qms)
 
 queryCountMessages :: Query -> IO Word
 queryCountMessages query = withForeignPtr query $
@@ -280,7 +283,9 @@ threadGetToplevelMessages thread = withForeignPtr (tp thread) $ (\t -> do
   messages <- f_notmuch_thread_get_toplevel_messages t
   when (messages == nullPtr) $
        fail "thread get top-level messages failed"
-  unpackMessages messages)
+  ms <- newForeignPtr pf_notmuch_messages_destroy messages
+  let tms = ThreadMessages thread ms
+  unpackMessages tms)
 
 -- XXX This pretty clearly wants to return a list of authors
 -- rather than a string containing a comma-separated list of
@@ -345,7 +350,9 @@ messageGetReplies message = withForeignPtr (mp message) $ (\m -> do
   messages <- f_notmuch_message_get_replies m
   when (messages == nullPtr) $
        fail "message get replies failed"
-  unpackMessages messages)
+  ms <- newForeignPtr pf_notmuch_messages_destroy messages
+  let mms = MessageMessages message ms
+  unpackMessages mms)
   
 messageGetFilePath :: Message -> IO FilePath
 messageGetFilePath message = withForeignPtr (mp message) $ (\m -> do
