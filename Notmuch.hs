@@ -122,8 +122,8 @@ databaseAddMessage db filename = alloca msgFun where
       s <- withCString filename addMessage
       statusCheck s
       cmsg <- peek msgPtr
-      mp <- newForeignPtr pf_notmuch_message_destroy cmsg
-      return $ Message mp
+      m <- newForeignPtr pf_notmuch_message_destroy cmsg
+      return $ Message m
 
 -- XXX This function will fail on dup remove, rather than
 -- succeed.  I have no idea what it should do, and this
@@ -144,8 +144,8 @@ databaseFindMessage db msgid = do
   cmsg <- withCString msgid findMessage
   when (cmsg == nullPtr) $
        fail "database find message failed"
-  mp <- newForeignPtr pf_notmuch_message_destroy cmsg
-  return $ Message mp
+  m <- newForeignPtr pf_notmuch_message_destroy cmsg
+  return $ Message m
   
 iterM :: Monad m => a -> (a -> m Bool) -> (a -> m b) -> m [b]
 iterM coln test get = do
@@ -233,25 +233,27 @@ queryThreads query = withForeignPtr query $ (\q -> do
   threads <- f_notmuch_query_search_threads q
   when (threads == nullPtr) $
        fail "query threads failed"
-  tfp <- newForeignPtr pf_notmuch_threads_destroy threads
-  let qts = QueryThreads query tfp
-  result <- iterUnpack threads
-            f_notmuch_threads_has_more
-            (\t -> f_notmuch_threads_get t >>=
-                   newForeignPtr pf_notmuch_thread_destroy)
-            f_notmuch_threads_advance
-  return $ map (ThreadsThread qts) result)
+  tsp <- newForeignPtr pf_notmuch_threads_destroy threads
+  let qts = QueryThreads query tsp
+  iterUnpack threads
+      f_notmuch_threads_has_more
+      (\ts -> do
+         t <- f_notmuch_threads_get ts
+         tp <- newForeignPtr pf_notmuch_thread_destroy t
+         let tst = ThreadsThread qts tp
+         return tst)
+      f_notmuch_threads_advance)
 
 unpackMessages :: MessagesRef -> IO Messages
 unpackMessages messages = withForeignPtr (msp messages) $ (\ms -> do
-  result <- iterUnpack ms
-            f_notmuch_messages_has_more
-            (\t -> do
-               m <- f_notmuch_messages_get t
-               mp <- newForeignPtr pf_notmuch_message_destroy m
-               return $ MessagesMessage messages mp)
-            f_notmuch_messages_advance
-  return result)
+  iterUnpack ms
+      f_notmuch_messages_has_more
+      (\t -> do
+         m <- f_notmuch_messages_get t
+         mp <- newForeignPtr pf_notmuch_message_destroy m
+         let msm = MessagesMessage messages mp
+         return msm)
+      f_notmuch_messages_advance)
 
 queryMessages :: Query -> IO Messages
 queryMessages query = withForeignPtr query $ (\q -> do
@@ -288,9 +290,9 @@ threadGetToplevelMessages thread = withForeignPtr (tp thread) $ (\t -> do
   unpackMessages tms)
 
 -- XXX This pretty clearly wants to return a list of authors
--- rather than a string containing a comma-separated list of
--- authors, but the underlying interface doesn't provide a
--- way to do that.
+-- rather than a single string containing a comma-separated
+-- list of authors, but I was too lazy to write the Haskell
+-- yet.
 threadGetAuthors :: Thread -> IO String
 threadGetAuthors thread = withForeignPtr (tp thread) $ (\t -> do
   authors <- f_notmuch_thread_get_authors t
