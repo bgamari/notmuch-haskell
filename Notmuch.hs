@@ -94,12 +94,16 @@ databaseGetDirectory db path = withCString path $ (\p -> do
   dir <- f_notmuch_database_get_directory db p
   newForeignPtr pf_notmuch_directory_destroy dir)
   
-type CMessages = Ptr S__notmuch_messages
+type MessagesPtr = ForeignPtr S__notmuch_messages
 
-data Message = QueryMessage { qp :: Query,
-                              mp :: ForeignPtr S__notmuch_message }
-             | ChildMessage { pp :: Message,
-                              mp :: ForeignPtr S__notmuch_message }
+type MessagePtr = ForeignPtr S__notmuch_message
+
+data MessagesRef = QueryMessages { qmpp :: Query, msp :: MessagesPtr }
+                 | ThreadMessages { tmpp :: Thread, msp :: MessagesPtr }
+                 | MessageMessages { mmspp :: Message, msp :: MessagesPtr }
+
+data Message = MessagesMessage { msmpp :: MessagesRef, mp :: MessagePtr }
+             | Message { mp :: MessagePtr }
 
 type Messages = [Message]
 
@@ -209,12 +213,17 @@ querySetSortOrder query sortOrder =
             fromIntegral $ fromEnum sortOrder in
     withForeignPtr query setSort
 
-type Threads = Ptr S__notmuch_threads
+type ThreadsPtr = ForeignPtr S__notmuch_threads
 
-data Thread = Thread { qp :: Query,
-                       tp :: ForeignPtr S__notmuch_thread }
+type ThreadPtr = ForeignPtr S__notmuch_thread
 
-queryThreads :: Query -> IO [Thread]
+data Thread = QueryThread { qtpp :: Query,
+                            tp :: ThreadPtr }
+            | ThreadsThread { ttpp :: ThreadsPtr,
+                              tp :: ThreadPtr }
+type Threads = [Thread]
+
+queryThreads :: Query -> IO Threads
 queryThreads query = withForeignPtr query $ (\q -> do
   threads <- f_notmuch_query_search_threads q
   when (threads == nullPtr) $
@@ -225,9 +234,9 @@ queryThreads query = withForeignPtr query $ (\q -> do
                    newForeignPtr pf_notmuch_thread_destroy)
             f_notmuch_threads_advance
   f_notmuch_threads_destroy threads
-  return $ map (Thread query) result)
+  return $ map (QueryThread query) result)
 
-unpackMessages :: CMessages -> IO Messages
+unpackMessages :: MessagesPtr -> IO Messages
 unpackMessages messages = do
   result <- iterUnpack messages
             f_notmuch_messages_has_more
