@@ -208,7 +208,8 @@ querySetSortOrder query sortOrder =
 
 type Threads = Ptr S__notmuch_threads
 
-type Thread = ForeignPtr S__notmuch_thread
+data Thread = Thread { qp :: Query,
+                       tp :: ForeignPtr S__notmuch_thread }
 
 queryThreads :: Query -> IO [Thread]
 queryThreads query = withForeignPtr query $ (\q -> do
@@ -221,7 +222,7 @@ queryThreads query = withForeignPtr query $ (\q -> do
                    newForeignPtr pf_notmuch_thread_destroy)
             f_notmuch_threads_advance
   f_notmuch_threads_destroy threads
-  return result)
+  return $ map (Thread query) result)
 
 unpackMessages :: CMessages -> IO Messages
 unpackMessages messages = do
@@ -245,19 +246,19 @@ queryCountMessages query = withForeignPtr query $
     resultWord . f_notmuch_query_count_messages
 
 getThreadID :: Thread -> IO String
-getThreadID thread = withForeignPtr thread $
+getThreadID thread = withForeignPtr (tp thread) $
     resultString . f_notmuch_thread_get_thread_id
 
 threadCountMessages :: Thread -> IO Int
-threadCountMessages thread = withForeignPtr thread $
+threadCountMessages thread = withForeignPtr (tp thread) $
     resultInt . f_notmuch_thread_get_total_messages
 
 threadCountMatchedMessages :: Thread -> IO Int
-threadCountMatchedMessages thread = withForeignPtr thread $
+threadCountMatchedMessages thread = withForeignPtr (tp thread) $
     resultInt . f_notmuch_thread_get_matched_messages
 
 threadGetToplevelMessages :: Thread -> IO Messages
-threadGetToplevelMessages thread = withForeignPtr thread $ (\t -> do
+threadGetToplevelMessages thread = withForeignPtr (tp thread) $ (\t -> do
   messages <- f_notmuch_thread_get_toplevel_messages t
   when (messages == nullPtr) $
        fail "thread get top-level messages failed"
@@ -268,31 +269,31 @@ threadGetToplevelMessages thread = withForeignPtr thread $ (\t -> do
 -- authors, but the underlying interface doesn't provide a
 -- way to do that.
 threadGetAuthors :: Thread -> IO String
-threadGetAuthors thread = withForeignPtr thread $ (\t -> do
+threadGetAuthors thread = withForeignPtr (tp thread) $ (\t -> do
   authors <- f_notmuch_thread_get_authors t
   when (authors == nullPtr) $
        fail "thread get authors failed"
   peekCString authors)
 
 threadGetSubject :: Thread -> IO String
-threadGetSubject thread = withForeignPtr thread $ (\t -> do
+threadGetSubject thread = withForeignPtr (tp thread) $ (\t -> do
   subject <- f_notmuch_thread_get_subject t
   when (subject == nullPtr) $
        fail "thread get subject failed"
   peekCString subject)
 
 threadGetOldestDate :: Thread -> IO UTCTime
-threadGetOldestDate thread = withForeignPtr thread $ (\t -> do
+threadGetOldestDate thread = withForeignPtr (tp thread) $ (\t -> do
   date <- f_notmuch_thread_get_oldest_date t
   return $ posixSecondsToUTCTime $ realToFrac date)
 
 threadGetNewestDate :: Thread -> IO UTCTime
-threadGetNewestDate thread = withForeignPtr thread $ (\t -> do
+threadGetNewestDate thread = withForeignPtr (tp thread) $ (\t -> do
   date <- f_notmuch_thread_get_newest_date t
   return $ posixSecondsToUTCTime $ realToFrac date)
 
 threadGetTags :: Thread -> IO Tags
-threadGetTags thread = withForeignPtr thread $ (\t -> do
+threadGetTags thread = withForeignPtr (tp thread) $ (\t -> do
   tags <-  f_notmuch_thread_get_tags t
   when (tags == nullPtr) $
        fail "thread get tags failed"
