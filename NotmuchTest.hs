@@ -28,7 +28,7 @@ main = do
   putStr $ show (length threads) ++ ": "
   nthreadss <- mapM threadCountMessages threads
   print nthreadss
-  let thread = head threads
+  let thread = last threads
   subject <- threadGetSubject thread
   putStrLn subject
   messages <- threadGetToplevelMessages thread
