@@ -148,14 +148,14 @@ databaseFindMessage db msgid = do
   return $ Message m
   
 iterM :: Monad m => a -> (a -> m Bool) -> (a -> m b) -> m [b]
-iterM coln test get = do
-  cont <- test coln
-  case cont of
-    True -> do
-      elem <- get coln
-      rest <- iterM coln test get
-      return $ elem : rest
-    False -> return []
+iterM coln test get = go [] coln test get
+    where go acc coln test get = do
+            cont <- test coln
+            case cont of
+              True -> do
+                elem <- get coln
+                go (elem : acc) coln test get
+              False -> return acc
 
 iterUnpack :: Ptr a -> (Ptr a -> IO CInt) ->
               (Ptr a -> IO b) -> (Ptr a -> IO ()) ->
