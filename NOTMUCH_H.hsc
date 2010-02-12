@@ -150,6 +150,9 @@ foreign import ccall "static notmuch.h notmuch_threads_advance"
 foreign import ccall "static notmuch.h notmuch_threads_destroy"
   f_notmuch_threads_destroy :: Ptr (S__notmuch_threads) -> IO (())
 
+foreign import ccall "static notmuch.h & notmuch_threads_destroy"
+  pf_notmuch_threads_destroy :: FunPtr (Ptr (S__notmuch_threads) -> IO (()))
+
 foreign import ccall "static notmuch.h notmuch_query_count_messages"
   f_notmuch_query_count_messages :: Ptr (S__notmuch_query) -> IO (CUInt)
 
