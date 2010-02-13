@@ -3,15 +3,18 @@ Version: 0.2.1
 Cabal-Version: >= 1.6
 Author: Bart Massey
 Copyright: © 2010 Bart Massey
-License: LGPL3
+License: LGPL
 License-file: COPYING
 Synopsis: Binding for notmuch MUA library
 Category: EMail
 Build-Type: Simple
+Stability: Experimental
+Bug-Reports: mailto:bart@cs.pdx.edu
 
 Library
   Build-Depends: base, containers, time, filepath
   Exposed-Modules: Notmuch
   Other-Modules: NOTMUCH_H
-  Extra-Libraries: notmuch/lib/notmuch.a gmime-2.4 z nsl gobject-2.0 glib-2.0 talloc xapian
+  Extra-Libraries: notmuch gmime-2.4 z nsl gobject-2.0 glib-2.0 talloc xapian
+  Extra-Lib-Dirs: notmuch/lib
   Include-Dirs: . notmuch/lib

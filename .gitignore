@@ -5,3 +5,4 @@ notmuchtest
 NOTMUCH_H.hs
 NOTMUCH_H_hsc.h
 NOTMUCH_H_stub.h
+/dist
