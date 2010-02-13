@@ -259,7 +259,7 @@ data Thread = QueryThread { qtpp :: Query,
 type Threads = [Thread]
 
 queryThreads :: Query -> IO Threads
-queryThreads (Query query) = withForeignPtr query $ (\q -> do
+queryThreads (Query query) = withForeignPtr query $ \q -> do
   threads <- f_notmuch_query_search_threads q
   when (threads == nullPtr) $
        fail "query threads failed"
@@ -272,10 +272,10 @@ queryThreads (Query query) = withForeignPtr query $ (\q -> do
          tp <- newForeignPtr pf_notmuch_thread_destroy t
          let tst = ThreadsThread qts tp
          return tst)
-      f_notmuch_threads_advance)
+      f_notmuch_threads_advance
 
 unpackMessages :: MessagesRef -> IO Messages
-unpackMessages messages = withForeignPtr (msp messages) $ (\ms -> do
+unpackMessages messages = withForeignPtr (msp messages) $ \ms -> do
   iterUnpack ms
       f_notmuch_messages_has_more
       (\t -> do
@@ -283,16 +283,16 @@ unpackMessages messages = withForeignPtr (msp messages) $ (\ms -> do
          mp <- newForeignPtr pf_notmuch_message_destroy m
          let msm = MessagesMessage messages mp
          return msm)
-      f_notmuch_messages_advance)
+      f_notmuch_messages_advance
 
 queryMessages :: Query -> IO Messages
-queryMessages (Query query) = withForeignPtr query $ (\q -> do
+queryMessages (Query query) = withForeignPtr query $ \q -> do
   messages <- f_notmuch_query_search_messages q
   when (messages == nullPtr) $
        fail "query messages failed"
   ms <- newForeignPtr pf_notmuch_messages_destroy messages
   let qms = QueryMessages (Query query) ms
-  unpackMessages qms)
+  unpackMessages qms
 
 queryCountMessages :: Query -> IO Word
 queryCountMessages (Query query) = withForeignPtr query $
@@ -311,48 +311,48 @@ threadCountMatchedMessages thread = withForeignPtr (tp thread) $
     resultInt . f_notmuch_thread_get_matched_messages
 
 threadGetToplevelMessages :: Thread -> IO Messages
-threadGetToplevelMessages thread = withForeignPtr (tp thread) $ (\t -> do
+threadGetToplevelMessages thread = withForeignPtr (tp thread) $ \t -> do
   messages <- f_notmuch_thread_get_toplevel_messages t
   when (messages == nullPtr) $
        fail "thread get top-level messages failed"
   ms <- newForeignPtr pf_notmuch_messages_destroy messages
   let tms = ThreadMessages thread ms
-  unpackMessages tms)
+  unpackMessages tms
 
 -- XXX This pretty clearly wants to return a list of authors
 -- rather than a single string containing a comma-separated
 -- list of authors, but I was too lazy to write the Haskell
 -- yet.
 threadGetAuthors :: Thread -> IO String
-threadGetAuthors thread = withForeignPtr (tp thread) $ (\t -> do
+threadGetAuthors thread = withForeignPtr (tp thread) $ \t -> do
   authors <- f_notmuch_thread_get_authors t
   when (authors == nullPtr) $
        fail "thread get authors failed"
-  peekCString authors)
+  peekCString authors
 
 threadGetSubject :: Thread -> IO String
-threadGetSubject thread = withForeignPtr (tp thread) $ (\t -> do
+threadGetSubject thread = withForeignPtr (tp thread) $ \t -> do
   subject <- f_notmuch_thread_get_subject t
   when (subject == nullPtr) $
        fail "thread get subject failed"
-  peekCString subject)
+  peekCString subject
 
 threadGetOldestDate :: Thread -> IO UTCTime
-threadGetOldestDate thread = withForeignPtr (tp thread) $ (\t -> do
+threadGetOldestDate thread = withForeignPtr (tp thread) $ \t -> do
   date <- f_notmuch_thread_get_oldest_date t
-  return $ posixSecondsToUTCTime $ realToFrac date)
+  return $ posixSecondsToUTCTime $ realToFrac date
 
 threadGetNewestDate :: Thread -> IO UTCTime
-threadGetNewestDate thread = withForeignPtr (tp thread) $ (\t -> do
+threadGetNewestDate thread = withForeignPtr (tp thread) $ \t -> do
   date <- f_notmuch_thread_get_newest_date t
-  return $ posixSecondsToUTCTime $ realToFrac date)
+  return $ posixSecondsToUTCTime $ realToFrac date
 
 threadGetTags :: Thread -> IO Tags
-threadGetTags thread = withForeignPtr (tp thread) $ (\t -> do
+threadGetTags thread = withForeignPtr (tp thread) $ \t -> do
   tags <-  f_notmuch_thread_get_tags t
   when (tags == nullPtr) $
        fail "thread get tags failed"
-  unpackTags tags)
+  unpackTags tags
 
 -- XXX Because of the peculiar way this is implemented and
 -- interfaced in notmuch, we provide a Haskell re-implementation
@@ -363,35 +363,35 @@ messagesCollectTags messages = do
   return $ nub $ concat tagses
 
 messageGetMessageID :: Message -> IO String
-messageGetMessageID message = withForeignPtr (mp message) $ (\m -> do
+messageGetMessageID message = withForeignPtr (mp message) $ \m -> do
   msgid <- f_notmuch_message_get_message_id m
   when (msgid == nullPtr) $
        fail "message get message ID failed"
-  peekCString msgid)
+  peekCString msgid
   
 
 messageGetThreadID :: Message -> IO String
-messageGetThreadID message = withForeignPtr (mp message) $ (\m -> do
+messageGetThreadID message = withForeignPtr (mp message) $ \m -> do
   tid <- f_notmuch_message_get_thread_id m
   when (tid == nullPtr) $
        fail "message get thread ID failed"
-  peekCString tid)
+  peekCString tid
   
 messageGetReplies :: Message -> IO Messages
-messageGetReplies message = withForeignPtr (mp message) $ (\m -> do
+messageGetReplies message = withForeignPtr (mp message) $ \m -> do
   messages <- f_notmuch_message_get_replies m
   when (messages == nullPtr) $
        fail "message get replies failed"
   ms <- newForeignPtr pf_notmuch_messages_destroy messages
   let mms = MessageMessages message ms
-  unpackMessages mms)
+  unpackMessages mms
   
 messageGetFilePath :: Message -> IO FilePath
-messageGetFilePath message = withForeignPtr (mp message) $ (\m -> do
+messageGetFilePath message = withForeignPtr (mp message) $ \m -> do
   path <- f_notmuch_message_get_filename m
   when (path == nullPtr) $
        fail "message get file path failed"
-  peekCString path)
+  peekCString path
 
 data MessageFlag =
     MessageFlagMatch
@@ -411,73 +411,73 @@ messageSetFlag message flag sense =
       f_notmuch_message_set_flag m cflag csense)
 
 messageGetDate :: Message -> IO UTCTime
-messageGetDate message = withForeignPtr (mp message) $ (\m -> do
+messageGetDate message = withForeignPtr (mp message) $ \m -> do
   date <- f_notmuch_message_get_date m
-  return $ posixSecondsToUTCTime $ realToFrac date)
+  return $ posixSecondsToUTCTime $ realToFrac date
 
 messageGetHeader :: Message -> String -> IO String
-messageGetHeader message header = withForeignPtr (mp message) (\m ->
-  withCString header (resultString . f_notmuch_message_get_header m))
+messageGetHeader message header = withForeignPtr (mp message) $ \m ->
+  withCString header (resultString . f_notmuch_message_get_header m)
 
 messageGetTags :: Message -> IO Tags
-messageGetTags message = withForeignPtr (mp message) $ (\m -> do
+messageGetTags message = withForeignPtr (mp message) $ \m -> do
   tags <- f_notmuch_message_get_tags m
   when (tags == nullPtr) $
        fail "message get tags failed"
-  unpackTags tags)
+  unpackTags tags
 
 messageAddTag :: Message -> String -> IO ()
-messageAddTag message tag = withForeignPtr (mp message) $ (\m -> do
+messageAddTag message tag = withForeignPtr (mp message) $ \m -> do
   s <- withCString tag $ f_notmuch_message_add_tag m
-  statusCheck s)
+  statusCheck s
 
 messageRemoveTag :: Message -> String -> IO ()
-messageRemoveTag message tag = withForeignPtr (mp message) $ (\m -> do
+messageRemoveTag message tag = withForeignPtr (mp message) $ \m -> do
   s <- withCString tag $ f_notmuch_message_remove_tag m
-  statusCheck s)
+  statusCheck s
 
 messageRemoveAllTags :: Message -> IO ()
-messageRemoveAllTags message = withForeignPtr (mp message) $ (\m -> do
+messageRemoveAllTags message = withForeignPtr (mp message) $ \m -> do
   s <- f_notmuch_message_remove_all_tags m
-  statusCheck s)
+  statusCheck s
 
 messageFreeze :: Message -> IO ()
-messageFreeze message = withForeignPtr (mp message) $ (\m -> do
+messageFreeze message = withForeignPtr (mp message) $ \m -> do
   s <- f_notmuch_message_freeze m
-  statusCheck s)
+  statusCheck s
 
 messageThaw :: Message -> IO ()
-messageThaw message = withForeignPtr (mp message) $ (\m -> do
+messageThaw message = withForeignPtr (mp message) $ \m -> do
   s <- f_notmuch_message_thaw m
-  statusCheck s)
+  statusCheck s
 
 directorySetMtime :: Directory -> UTCTime -> IO ()
-directorySetMtime (Directory dir) time = withForeignPtr dir $ (\d -> do
+directorySetMtime (Directory dir) time = withForeignPtr dir $ \d -> do
   let t = fromIntegral $ floor $ realToFrac $ utcTimeToPOSIXSeconds time
   when (t <= 0) $
        fail "directory set mtime with invalid mtime"
   s <- f_notmuch_directory_set_mtime d t
-  statusCheck s)
+  statusCheck s
 
 directoryGetMtime :: Directory -> IO UTCTime
-directoryGetMtime (Directory dir) = withForeignPtr dir $ (\d -> do
+directoryGetMtime (Directory dir) = withForeignPtr dir $ \d -> do
   t <- f_notmuch_directory_get_mtime d
   when (t <= 0) $
        fail "directory get mtime failed"
-  return $ posixSecondsToUTCTime $ realToFrac t)
+  return $ posixSecondsToUTCTime $ realToFrac t
 
 directoryGetChildFiles :: Directory -> IO [FilePath]
-directoryGetChildFiles (Directory dir) = withForeignPtr dir $ (\d -> do
+directoryGetChildFiles (Directory dir) = withForeignPtr dir $ \d -> do
   filenames <- f_notmuch_directory_get_child_files d
   iterUnpack filenames
     f_notmuch_filenames_has_more
     (resultString . f_notmuch_filenames_get)
-    f_notmuch_filenames_advance)
+    f_notmuch_filenames_advance
 
 directoryGetChildDirectories :: Directory -> IO [FilePath]
-directoryGetChildDirectories (Directory dir) = withForeignPtr dir $ (\d -> do
+directoryGetChildDirectories (Directory dir) = withForeignPtr dir $ \d -> do
   filenames <- f_notmuch_directory_get_child_directories d
   iterUnpack filenames
     f_notmuch_filenames_has_more
     (resultString . f_notmuch_filenames_get)
-    f_notmuch_filenames_advance)
+    f_notmuch_filenames_advance
