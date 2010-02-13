@@ -1,8 +1,32 @@
 -- Copyright © 2010 Bart Massey
 -- notmuch mail library high-level interface
 
-module Notmuch
-where
+module Notmuch (
+  Database, databaseCreate, DatabaseMode(..),
+  databaseOpen, databaseClose, databaseGetPath,
+  databaseGetVersion, databaseNeedsUpgrade,
+  UpgradeCallback, databaseUpgrade,
+  Directory, databaseGetDirectory,
+  Message, Messages, databaseAddMessage,
+  databaseRemoveMessage, databaseFindMessage,
+  Tags, databaseGetAllTags,
+  Query, queryCreate, SortOrder, querySetSortOrder,
+  Thread, Threads, queryThreads,
+  queryMessages, queryCountMessages,
+  getThreadID, threadCountMessages, threadCountMatchedMessages,
+  threadGetToplevelMessages, threadGetAuthors,
+  threadGetSubject, threadGetOldestDate, threadGetNewestDate,
+  threadGetTags,
+  messagesCollectTags, messageGetMessageID, messageGetThreadID,
+  messageGetReplies, messageGetFilePath,
+  MessageFlag(..), messageGetFlag, messageSetFlag,
+  messageGetDate, messageGetHeader,
+  messageGetTags, messageAddTag,
+  messageRemoveTag, messageRemoveAllTags,
+  messageFreeze, messageThaw,
+  directorySetMtime, directoryGetMtime,
+  directoryGetChildFiles, directoryGetChildDirectories
+) where
 
 import NOTMUCH_H
 
