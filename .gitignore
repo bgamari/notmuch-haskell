@@ -1,6 +1,5 @@
 *.hi
 *.[co]
-notmuch
 notmuchtest
 NOTMUCH_H.hs
 NOTMUCH_H_hsc.h

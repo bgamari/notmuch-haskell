@@ -1,0 +1,3 @@
+[submodule "notmuch"]
+	path = notmuch
+	url = git://svcs.cs.pdx.edu/git/notmuch.git
