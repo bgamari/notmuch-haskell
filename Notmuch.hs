@@ -114,12 +114,13 @@ databaseUpgrade (Database db) Nothing = do
   s <- f_notmuch_database_upgrade db nullFunPtr nullPtr
   statusCheck s
 
-type Directory = ForeignPtr S__notmuch_directory
+newtype Directory = Directory (ForeignPtr S__notmuch_directory)
 
 databaseGetDirectory :: Database -> FilePath -> IO Directory
 databaseGetDirectory (Database db) path = withCString path $ (\p -> do
   dir <- f_notmuch_database_get_directory db p
-  newForeignPtr pf_notmuch_directory_destroy dir)
+  dirp <- newForeignPtr pf_notmuch_directory_destroy dir
+  return $ Directory dirp)
   
 type MessagesPtr = ForeignPtr S__notmuch_messages
 
@@ -196,11 +197,11 @@ iterUnpack coln f_has_more f_get f_advance =
         f_advance coln'
         return e
 
-type CTags = Ptr S__notmuch_tags
+type TagsPtr = Ptr S__notmuch_tags
 
 type Tags = [String]
 
-unpackTags :: CTags -> IO Tags
+unpackTags :: TagsPtr -> IO Tags
 unpackTags tags = do
   result <- iterUnpack tags
             f_notmuch_tags_has_more
@@ -217,14 +218,15 @@ databaseGetAllTags (Database db) = do
        fail "database get all tags failed"
   unpackTags tags
 
-type Query = ForeignPtr S__notmuch_query
+newtype Query = Query (ForeignPtr S__notmuch_query)
 
 queryCreate :: Database -> String -> IO Query
 queryCreate (Database db) queryString = do
     query <- withCString queryString $ f_notmuch_query_create db
     when (query == nullPtr) $
          fail "query create failed"
-    newForeignPtr pf_notmuch_query_destroy query
+    queryp <- newForeignPtr pf_notmuch_query_destroy query
+    return $ Query queryp
 
 -- XXX Deriving Enum will only work if these fields are in
 -- the same order as in notmuch.h and there are no gaps
@@ -236,7 +238,7 @@ data SortOrder =
     deriving Enum
 
 querySetSortOrder :: Query -> SortOrder -> IO ()
-querySetSortOrder query sortOrder =
+querySetSortOrder (Query query) sortOrder =
     let setSort query' =
             f_notmuch_query_set_sort query' $
             fromIntegral $ fromEnum sortOrder in
@@ -257,12 +259,12 @@ data Thread = QueryThread { qtpp :: Query,
 type Threads = [Thread]
 
 queryThreads :: Query -> IO Threads
-queryThreads query = withForeignPtr query $ (\q -> do
+queryThreads (Query query) = withForeignPtr query $ (\q -> do
   threads <- f_notmuch_query_search_threads q
   when (threads == nullPtr) $
        fail "query threads failed"
   tsp <- newForeignPtr pf_notmuch_threads_destroy threads
-  let qts = QueryThreads query tsp
+  let qts = QueryThreads (Query query) tsp
   iterUnpack threads
       f_notmuch_threads_has_more
       (\ts -> do
@@ -284,16 +286,16 @@ unpackMessages messages = withForeignPtr (msp messages) $ (\ms -> do
       f_notmuch_messages_advance)
 
 queryMessages :: Query -> IO Messages
-queryMessages query = withForeignPtr query $ (\q -> do
+queryMessages (Query query) = withForeignPtr query $ (\q -> do
   messages <- f_notmuch_query_search_messages q
   when (messages == nullPtr) $
        fail "query messages failed"
   ms <- newForeignPtr pf_notmuch_messages_destroy messages
-  let qms = QueryMessages query ms
+  let qms = QueryMessages (Query query) ms
   unpackMessages qms)
 
 queryCountMessages :: Query -> IO Word
-queryCountMessages query = withForeignPtr query $
+queryCountMessages (Query query) = withForeignPtr query $
     resultWord . f_notmuch_query_count_messages
 
 getThreadID :: Thread -> IO String
@@ -450,7 +452,7 @@ messageThaw message = withForeignPtr (mp message) $ (\m -> do
   statusCheck s)
 
 directorySetMtime :: Directory -> UTCTime -> IO ()
-directorySetMtime dir time = withForeignPtr dir $ (\d -> do
+directorySetMtime (Directory dir) time = withForeignPtr dir $ (\d -> do
   let t = fromIntegral $ floor $ realToFrac $ utcTimeToPOSIXSeconds time
   when (t <= 0) $
        fail "directory set mtime with invalid mtime"
@@ -458,14 +460,14 @@ directorySetMtime dir time = withForeignPtr dir $ (\d -> do
   statusCheck s)
 
 directoryGetMtime :: Directory -> IO UTCTime
-directoryGetMtime dir = withForeignPtr dir $ (\d -> do
+directoryGetMtime (Directory dir) = withForeignPtr dir $ (\d -> do
   t <- f_notmuch_directory_get_mtime d
   when (t <= 0) $
        fail "directory get mtime failed"
   return $ posixSecondsToUTCTime $ realToFrac t)
 
 directoryGetChildFiles :: Directory -> IO [FilePath]
-directoryGetChildFiles dir = withForeignPtr dir $ (\d -> do
+directoryGetChildFiles (Directory dir) = withForeignPtr dir $ (\d -> do
   filenames <- f_notmuch_directory_get_child_files d
   iterUnpack filenames
     f_notmuch_filenames_has_more
@@ -473,7 +475,7 @@ directoryGetChildFiles dir = withForeignPtr dir $ (\d -> do
     f_notmuch_filenames_advance)
 
 directoryGetChildDirectories :: Directory -> IO [FilePath]
-directoryGetChildDirectories dir = withForeignPtr dir $ (\d -> do
+directoryGetChildDirectories (Directory dir) = withForeignPtr dir $ (\d -> do
   filenames <- f_notmuch_directory_get_child_directories d
   iterUnpack filenames
     f_notmuch_filenames_has_more
