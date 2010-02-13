@@ -1,4 +1,5 @@
 -- notmuch-haskell: notmuch MUA Haskell binding
+-- high-level interface
 -- Copyright © 2010 Bart Massey
 -- Licensed LGPL v3: please see the file COPYING in this
 -- source distribution for licensing information.

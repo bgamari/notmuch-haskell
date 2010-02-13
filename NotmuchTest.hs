@@ -1,3 +1,9 @@
+-- notmuch-haskell: notmuch MUA Haskell binding
+-- test / demo program
+-- Copyright © 2010 Bart Massey
+-- Licensed LGPL v3: please see the file COPYING in this
+-- source distribution for licensing information.
+
 import Control.Monad
 import Data.Time
 import IO
