@@ -1,3 +1,8 @@
+# notmuch-haskell: notmuch MUA Haskell binding high-level interface
+# Copyright © 2010 Bart Massey
+# Licensed LGPL v3: please see the file COPYING in this
+# source distribution for licensing information.
+
 OBJS = Notmuch.o Notmuch.hi NOTMUCH_H_hsc.o
 LIBS = -lgmime-2.4 -lz -lnsl -lgobject-2.0 -lglib-2.0 -ltalloc -lxapian
 INCLUDES = -Inotmuch/lib

@@ -1,0 +1,17 @@
+Name: notmuch-haskell
+Version: 0.2.1
+Cabal-Version: >= 1.6
+Author: Bart Massey
+Copyright: © 2010 Bart Massey
+License: LGPL3
+License-file: COPYING
+Synopsis: Binding for notmuch MUA library
+Category: EMail
+Build-Type: Simple
+
+Library
+  Build-Depends: base, containers, time, filepath
+  Exposed-Modules: Notmuch
+  Other-Modules: NOTMUCH_H
+  Extra-Libraries: notmuch/lib/notmuch.a gmime-2.4 z nsl gobject-2.0 glib-2.0 talloc xapian
+  Include-Dirs: . notmuch/lib

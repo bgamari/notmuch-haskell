@@ -1,5 +1,7 @@
+-- notmuch-haskell: notmuch MUA Haskell binding low-level interface
 -- Copyright © 2010 Bart Massey
--- notmuch mail library low-level interface
+-- Licensed LGPL v3: please see the file COPYING in this
+-- source distribution for licensing information.
 
 -- Originally produced automatically from notmuch.h
 -- by hsffig

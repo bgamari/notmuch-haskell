@@ -1,5 +1,7 @@
+-- notmuch-haskell: notmuch MUA Haskell binding
 -- Copyright © 2010 Bart Massey
--- notmuch mail library high-level interface
+-- Licensed LGPL v3: please see the file COPYING in this
+-- source distribution for licensing information.
 
 module Notmuch (
   Database, databaseCreate, DatabaseMode(..),
