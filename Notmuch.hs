@@ -39,14 +39,14 @@ import Data.Time
 import Data.Time.Clock.POSIX
 import System.FilePath
 
-type Database = Ptr S__notmuch_database
+newtype Database = Database (Ptr S__notmuch_database)
 
 databaseCreate :: FilePath -> IO Database
 databaseCreate name = do
   db <- withCString name f_notmuch_database_create
   when (db == nullPtr) $
        fail "database create failed"
-  return db
+  return $ Database db
 
 -- XXX Deriving Enum will only work if these fields are in
 -- the same order as in notmuch.h and there are no gaps
@@ -63,17 +63,17 @@ databaseOpen name databaseMode = do
         fromIntegral $ fromEnum databaseMode
   when (db == nullPtr) $
        fail "database open failed"
-  return db
+  return $ Database db
 
 databaseClose :: Database -> IO ()
-databaseClose db = f_notmuch_database_close db
+databaseClose (Database db) = f_notmuch_database_close db
 
 databaseGetPath :: Database -> IO FilePath
-databaseGetPath db =
+databaseGetPath (Database db) =
     resultString $ f_notmuch_database_get_path db
 
 databaseGetVersion :: Database -> IO Int
-databaseGetVersion db = do
+databaseGetVersion (Database db) = do
   v <- f_notmuch_database_get_version db
   return $ fromIntegral v
 
@@ -90,7 +90,7 @@ resultWord :: IO CUInt -> IO Word
 resultWord = fmap fromIntegral
 
 databaseNeedsUpgrade :: Database -> IO Bool
-databaseNeedsUpgrade db =
+databaseNeedsUpgrade (Database db) =
     resultBool $ f_notmuch_database_needs_upgrade db
 
 statusCheck :: CInt -> IO ()
@@ -102,7 +102,7 @@ statusCheck s = do
 type UpgradeCallback = String -> Double -> IO ()
 
 databaseUpgrade :: Database -> Maybe UpgradeCallback -> IO ()
-databaseUpgrade db (Just callback) = do
+databaseUpgrade (Database db) (Just callback) = do
   let ccb msg progress = do
         cmsg <- peekCString msg
         let cprogress = realToFrac progress
@@ -110,14 +110,14 @@ databaseUpgrade db (Just callback) = do
   cb <- w_notmuch_database_upgrade_1 ccb
   s <- f_notmuch_database_upgrade db cb nullPtr
   statusCheck s
-databaseUpgrade db Nothing = do
+databaseUpgrade (Database db) Nothing = do
   s <- f_notmuch_database_upgrade db nullFunPtr nullPtr
   statusCheck s
 
 type Directory = ForeignPtr S__notmuch_directory
 
 databaseGetDirectory :: Database -> FilePath -> IO Directory
-databaseGetDirectory db path = withCString path $ (\p -> do
+databaseGetDirectory (Database db) path = withCString path $ (\p -> do
   dir <- f_notmuch_database_get_directory db p
   newForeignPtr pf_notmuch_directory_destroy dir)
   
@@ -142,7 +142,7 @@ type Messages = [Message]
 -- succeed.  I have no idea what it should do, and this
 -- was easiest.
 databaseAddMessage :: Database -> FilePath -> IO Message
-databaseAddMessage db filename = alloca msgFun where
+databaseAddMessage (Database db) filename = alloca msgFun where
     msgFun msgPtr = do
       let addMessage fn =
               f_notmuch_database_add_message db fn msgPtr
@@ -156,7 +156,7 @@ databaseAddMessage db filename = alloca msgFun where
 -- succeed.  I have no idea what it should do, and this
 -- was easiest.
 databaseRemoveMessage :: Database -> FilePath -> IO ()
-databaseRemoveMessage db filename = do
+databaseRemoveMessage (Database db) filename = do
   let removeMessage fn = f_notmuch_database_remove_message db fn
   s <- withCString filename removeMessage
   statusCheck s
@@ -165,7 +165,7 @@ databaseRemoveMessage db filename = do
 -- of failing if the message is not found.  I don't quite
 -- understand the use case yet.
 databaseFindMessage :: Database -> String -> IO Message
-databaseFindMessage db msgid = do
+databaseFindMessage (Database db) msgid = do
   let findMessage mid =
           f_notmuch_database_find_message db mid
   cmsg <- withCString msgid findMessage
@@ -211,7 +211,7 @@ unpackTags tags = do
 
 
 databaseGetAllTags :: Database -> IO Tags
-databaseGetAllTags db = do
+databaseGetAllTags (Database db) = do
   tags <- f_notmuch_database_get_all_tags db
   when (tags == nullPtr) $
        fail "database get all tags failed"
@@ -220,7 +220,7 @@ databaseGetAllTags db = do
 type Query = ForeignPtr S__notmuch_query
 
 queryCreate :: Database -> String -> IO Query
-queryCreate db queryString = do
+queryCreate (Database db) queryString = do
     query <- withCString queryString $ f_notmuch_query_create db
     when (query == nullPtr) $
          fail "query create failed"
