@@ -13,7 +13,7 @@ module Notmuch (
   Message, Messages, databaseAddMessage,
   databaseRemoveMessage, databaseFindMessage,
   Tags, databaseGetAllTags,
-  Query, queryCreate, SortOrder, querySetSortOrder,
+  Query, queryCreate, SortOrder(..), querySetSortOrder,
   Thread, Threads, queryThreads,
   queryMessages, queryCountMessages,
   getThreadID, threadCountMessages, threadCountMatchedMessages,
