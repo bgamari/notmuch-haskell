@@ -11,13 +11,16 @@ NOTMUCHLIB = notmuch/lib/libnotmuch.a
 notmuchtest: $(OBJS) NotmuchTest.hs
 	ghc --make -o notmuchtest NotmuchTest.hs $(NOTMUCHLIB) $(LIBS)
 
-NOTMUCH_H_hsc.c NOTMUCH_H_hsc.h: NOTMUCH_H.hsc
+NOTMUCH_H_hsc.c NOTMUCH_H_hsc.h NOTMUCH_H.hs: NOTMUCH_H.hsc
 	hsc2hs $(INCLUDES) NOTMUCH_H.hsc
 
 NOTMUCH_H_hsc.o: NOTMUCH_H_hsc.c NOTMUCH_H_hsc.h
 	ghc --make $(INCLUDES) NOTMUCH_H_hsc.c
 
-Notmuch.o Notmuch.hi: Notmuch.hs NOTMUCH_H_hsc.o
+NOTMUCH_H.o NOTMUCH_H.hi: NOTMUCH_H.hs
+	ghc --make $(INCLUDES) NOTMUCH_H.hs
+
+Notmuch.o Notmuch.hi: Notmuch.hs NOTMUCH_H_hsc.o NOTMUCH_H.hi NOTMUCH_H.o
 	ghc --make Notmuch.hs
 
 clean:
