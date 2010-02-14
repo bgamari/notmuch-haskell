@@ -37,23 +37,6 @@ import Foreign.Ptr
 import Foreign.C.Types
 import Foreign.C.String
 
-c_NOTMUCH_TAG_MAX = #const NOTMUCH_TAG_MAX
-
-type T_notmuch_bool_t = CInt
-type T_notmuch_database_mode_t = CInt
-type T_notmuch_database_t = S__notmuch_database
-type T_notmuch_directory_t = S__notmuch_directory
-type T_notmuch_filenames_t = S__notmuch_filenames
-type T_notmuch_message_flag_t = CInt
-type T_notmuch_message_t = S__notmuch_message
-type T_notmuch_messages_t = S__notmuch_messages
-type T_notmuch_query_t = S__notmuch_query
-type T_notmuch_sort_t = CInt
-type T_notmuch_status_t = CInt
-type T_notmuch_tags_t = S__notmuch_tags
-type T_notmuch_thread_t = S__notmuch_thread
-type T_notmuch_threads_t = S__notmuch_threads
-
 newtype S__notmuch_database = S__notmuch_database ()
 newtype S__notmuch_directory = S__notmuch_directory ()
 newtype S__notmuch_filenames = S__notmuch_filenames ()
@@ -63,24 +46,6 @@ newtype S__notmuch_query = S__notmuch_query ()
 newtype S__notmuch_tags = S__notmuch_tags ()
 newtype S__notmuch_thread = S__notmuch_thread ()
 newtype S__notmuch_threads = S__notmuch_threads ()
-
-e_NOTMUCH_DATABASE_MODE_READ_ONLY = #const  0 
-e_NOTMUCH_DATABASE_MODE_READ_WRITE = #const 1
-e_NOTMUCH_SORT_OLDEST_FIRST = #const 0
-e_NOTMUCH_SORT_NEWEST_FIRST = #const 1
-e_NOTMUCH_SORT_MESSAGE_ID = #const 2
-e_NOTMUCH_MESSAGE_FLAG_MATCH = #const 0
-e_NOTMUCH_STATUS_SUCCESS = #const  0 
-e_NOTMUCH_STATUS_OUT_OF_MEMORY = #const 1
-e_NOTMUCH_STATUS_READ_ONLY_DATABASE = #const 2
-e_NOTMUCH_STATUS_XAPIAN_EXCEPTION = #const 3
-e_NOTMUCH_STATUS_FILE_ERROR = #const 4
-e_NOTMUCH_STATUS_FILE_NOT_EMAIL = #const 5
-e_NOTMUCH_STATUS_DUPLICATE_MESSAGE_ID = #const 6
-e_NOTMUCH_STATUS_NULL_POINTER = #const 7
-e_NOTMUCH_STATUS_TAG_TOO_LONG = #const 8
-e_NOTMUCH_STATUS_UNBALANCED_FREEZE_THAW = #const 9
-e_NOTMUCH_STATUS_LAST_STATUS = #const 10
 
 foreign import ccall "static notmuch.h notmuch_status_to_string"
   f_notmuch_status_to_string :: CInt -> IO (Ptr (CChar))
