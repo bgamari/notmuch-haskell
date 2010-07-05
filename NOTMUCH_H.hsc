@@ -106,14 +106,14 @@ foreign import ccall "static notmuch.h notmuch_query_destroy"
 foreign import ccall "static notmuch.h &notmuch_query_destroy"
   pf_notmuch_query_destroy :: FunPtr (Ptr (S__notmuch_query) -> IO (()))
 
-foreign import ccall "static notmuch.h notmuch_threads_has_more"
-  f_notmuch_threads_has_more :: Ptr (S__notmuch_threads) -> IO (CInt)
+foreign import ccall "static notmuch.h notmuch_threads_valid"
+  f_notmuch_threads_valid :: Ptr (S__notmuch_threads) -> IO (CInt)
 
 foreign import ccall "static notmuch.h notmuch_threads_get"
   f_notmuch_threads_get :: Ptr (S__notmuch_threads) -> IO (Ptr (S__notmuch_thread))
 
-foreign import ccall "static notmuch.h notmuch_threads_advance"
-  f_notmuch_threads_advance :: Ptr (S__notmuch_threads) -> IO (())
+foreign import ccall "static notmuch.h notmuch_threads_move_to_next"
+  f_notmuch_threads_move_to_next :: Ptr (S__notmuch_threads) -> IO (())
 
 foreign import ccall "static notmuch.h notmuch_threads_destroy"
   f_notmuch_threads_destroy :: Ptr (S__notmuch_threads) -> IO (())
@@ -157,14 +157,14 @@ foreign import ccall "static notmuch.h notmuch_thread_destroy"
 foreign import ccall "static notmuch.h &notmuch_thread_destroy"
   pf_notmuch_thread_destroy :: FunPtr(Ptr (S__notmuch_thread) -> IO (()))
 
-foreign import ccall "static notmuch.h notmuch_messages_has_more"
-  f_notmuch_messages_has_more :: Ptr (S__notmuch_messages) -> IO (CInt)
+foreign import ccall "static notmuch.h notmuch_messages_valid"
+  f_notmuch_messages_valid :: Ptr (S__notmuch_messages) -> IO (CInt)
 
 foreign import ccall "static notmuch.h notmuch_messages_get"
   f_notmuch_messages_get :: Ptr (S__notmuch_messages) -> IO (Ptr (S__notmuch_message))
 
-foreign import ccall "static notmuch.h notmuch_messages_advance"
-  f_notmuch_messages_advance :: Ptr (S__notmuch_messages) -> IO (())
+foreign import ccall "static notmuch.h notmuch_messages_move_to_next"
+  f_notmuch_messages_move_to_next :: Ptr (S__notmuch_messages) -> IO (())
 
 foreign import ccall "static notmuch.h notmuch_messages_destroy"
   f_notmuch_messages_destroy :: Ptr (S__notmuch_messages) -> IO (())
@@ -223,14 +223,14 @@ foreign import ccall "static notmuch.h notmuch_message_destroy"
 foreign import ccall "static notmuch.h &notmuch_message_destroy"
   pf_notmuch_message_destroy :: FunPtr (Ptr (S__notmuch_message) -> IO (()))
 
-foreign import ccall "static notmuch.h notmuch_tags_has_more"
-  f_notmuch_tags_has_more :: Ptr (S__notmuch_tags) -> IO (CInt)
+foreign import ccall "static notmuch.h notmuch_tags_valid"
+  f_notmuch_tags_valid :: Ptr (S__notmuch_tags) -> IO (CInt)
 
 foreign import ccall "static notmuch.h notmuch_tags_get"
   f_notmuch_tags_get :: Ptr (S__notmuch_tags) -> IO (Ptr (CChar))
 
-foreign import ccall "static notmuch.h notmuch_tags_advance"
-  f_notmuch_tags_advance :: Ptr (S__notmuch_tags) -> IO (())
+foreign import ccall "static notmuch.h notmuch_tags_move_to_next"
+  f_notmuch_tags_move_to_next :: Ptr (S__notmuch_tags) -> IO (())
 
 foreign import ccall "static notmuch.h notmuch_tags_destroy"
   f_notmuch_tags_destroy :: Ptr (S__notmuch_tags) -> IO (())
@@ -253,14 +253,14 @@ foreign import ccall "static notmuch.h notmuch_directory_destroy"
 foreign import ccall "static notmuch.h & notmuch_directory_destroy"
   pf_notmuch_directory_destroy :: FunPtr (Ptr (S__notmuch_directory) -> IO (()))
 
-foreign import ccall "static notmuch.h notmuch_filenames_has_more"
-  f_notmuch_filenames_has_more :: Ptr (S__notmuch_filenames) -> IO (CInt)
+foreign import ccall "static notmuch.h notmuch_filenames_valid"
+  f_notmuch_filenames_valid :: Ptr (S__notmuch_filenames) -> IO (CInt)
 
 foreign import ccall "static notmuch.h notmuch_filenames_get"
   f_notmuch_filenames_get :: Ptr (S__notmuch_filenames) -> IO (Ptr (CChar))
 
-foreign import ccall "static notmuch.h notmuch_filenames_advance"
-  f_notmuch_filenames_advance :: Ptr (S__notmuch_filenames) -> IO (())
+foreign import ccall "static notmuch.h notmuch_filenames_move_to_next"
+  f_notmuch_filenames_move_to_next :: Ptr (S__notmuch_filenames) -> IO (())
 
 foreign import ccall "static notmuch.h notmuch_filenames_destroy"
   f_notmuch_filenames_destroy :: Ptr (S__notmuch_filenames) -> IO (())

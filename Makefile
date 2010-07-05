@@ -3,10 +3,11 @@
 # Licensed LGPL v3: please see the file COPYING in this
 # source distribution for licensing information.
 
+NOTMUCH=/usr/local/src/notmuch
 OBJS = Notmuch.o Notmuch.hi NOTMUCH_H_hsc.o
 LIBS = -lgmime-2.4 -lz -lnsl -lgobject-2.0 -lglib-2.0 -ltalloc -lxapian
-INCLUDES = -Inotmuch/lib
-NOTMUCHLIB = notmuch/lib/libnotmuch.a
+INCLUDES = -I$(NOTMUCH)/lib
+NOTMUCHLIB = $(NOTMUCH)/lib/libnotmuch.a
 
 notmuchtest: $(OBJS) NotmuchTest.hs
 	ghc --make -o notmuchtest NotmuchTest.hs $(NOTMUCHLIB) $(LIBS)

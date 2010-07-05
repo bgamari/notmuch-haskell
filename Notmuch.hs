@@ -188,13 +188,13 @@ iterM coln test get = go [] coln test get
 iterUnpack :: Ptr a -> (Ptr a -> IO CInt) ->
               (Ptr a -> IO b) -> (Ptr a -> IO ()) ->
               IO [b]
-iterUnpack coln f_has_more f_get f_advance =
+iterUnpack coln f_valid f_get f_move_to_next =
     iterM coln has_more get
     where
-      has_more = resultBool . f_has_more
+      has_more = resultBool . f_valid
       get coln' = do
         e <- f_get coln'
-        f_advance coln'
+        f_move_to_next coln'
         return e
 
 type TagsPtr = Ptr S__notmuch_tags
@@ -204,9 +204,9 @@ type Tags = [String]
 unpackTags :: TagsPtr -> IO Tags
 unpackTags tags = do
   result <- iterUnpack tags
-            f_notmuch_tags_has_more
+            f_notmuch_tags_valid
             (resultString . f_notmuch_tags_get)
-            f_notmuch_tags_advance
+            f_notmuch_tags_move_to_next
   f_notmuch_tags_destroy tags
   return result
 
@@ -266,24 +266,24 @@ queryThreads (Query query) = withForeignPtr query $ \q -> do
   tsp <- newForeignPtr pf_notmuch_threads_destroy threads
   let qts = QueryThreads (Query query) tsp
   iterUnpack threads
-      f_notmuch_threads_has_more
+      f_notmuch_threads_valid
       (\ts -> do
          t <- f_notmuch_threads_get ts
          tp <- newForeignPtr pf_notmuch_thread_destroy t
          let tst = ThreadsThread qts tp
          return tst)
-      f_notmuch_threads_advance
+      f_notmuch_threads_move_to_next
 
 unpackMessages :: MessagesRef -> IO Messages
 unpackMessages messages = withForeignPtr (msp messages) $ \ms -> do
   iterUnpack ms
-      f_notmuch_messages_has_more
+      f_notmuch_messages_valid
       (\t -> do
          m <- f_notmuch_messages_get t
          mp <- newForeignPtr pf_notmuch_message_destroy m
          let msm = MessagesMessage messages mp
          return msm)
-      f_notmuch_messages_advance
+      f_notmuch_messages_move_to_next
 
 queryMessages :: Query -> IO Messages
 queryMessages (Query query) = withForeignPtr query $ \q -> do
@@ -470,14 +470,14 @@ directoryGetChildFiles :: Directory -> IO [FilePath]
 directoryGetChildFiles (Directory dir) = withForeignPtr dir $ \d -> do
   filenames <- f_notmuch_directory_get_child_files d
   iterUnpack filenames
-    f_notmuch_filenames_has_more
+    f_notmuch_filenames_valid
     (resultString . f_notmuch_filenames_get)
-    f_notmuch_filenames_advance
+    f_notmuch_filenames_move_to_next
 
 directoryGetChildDirectories :: Directory -> IO [FilePath]
 directoryGetChildDirectories (Directory dir) = withForeignPtr dir $ \d -> do
   filenames <- f_notmuch_directory_get_child_directories d
   iterUnpack filenames
-    f_notmuch_filenames_has_more
+    f_notmuch_filenames_valid
     (resultString . f_notmuch_filenames_get)
-    f_notmuch_filenames_advance
+    f_notmuch_filenames_move_to_next
