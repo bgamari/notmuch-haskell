@@ -16,5 +16,8 @@ Library
   Exposed-Modules: Notmuch
   Other-Modules: NOTMUCH_H
   Extra-Libraries: notmuch gmime-2.4 z nsl gobject-2.0 glib-2.0 talloc xapian
-  Extra-Lib-Dirs: notmuch/lib
-  Include-Dirs: . notmuch/lib
+
+Executable NotmuchTest
+  main-is: NotmuchTest.hs
+  other-modules: Notmuch
+  build-depends: base, old-locale, parseargs
