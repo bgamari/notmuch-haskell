@@ -19,5 +19,6 @@ Library
 
 Executable NotmuchTest
   main-is: NotmuchTest.hs
-  other-modules: Notmuch
-  build-depends: base, old-locale, parseargs
+  other-modules: Notmuch NOTMUCH_H
+  build-depends: base, haskell98, old-locale, parseargs
+  Extra-Libraries: notmuch
