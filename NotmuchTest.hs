@@ -29,8 +29,10 @@ main = do
   version <- databaseGetVersion db
   putStrLn $ "version is " ++ show version
   upgrade <- databaseNeedsUpgrade db
-  when upgrade $
-       putStrLn "database needs upgrade"
+  when upgrade $ do
+    let cb msg progress = putStrLn $ msg ++ show progress
+    putStrLn "Upgrading database"
+    databaseUpgrade db (Just cb)
   query <- queryCreate db "subject:notmuch"
   nquery <- queryCountMessages query
   putStrLn $ "subject:notmuch returns " ++ show nquery ++ " results..."
