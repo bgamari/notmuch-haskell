@@ -5,7 +5,7 @@
 -- source distribution for licensing information.
 
 -- | This is a very preliminary higher-level Haskell binding
--- for the Notmuch email library (http://notmuchmail.org).
+-- for the Notmuch (notmuchmail.org) email indexing library.
 -- There is no documentation here; see the Notmuch
 -- documentation for hints on how to use this.
 

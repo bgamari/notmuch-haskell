@@ -13,8 +13,7 @@ Stability: Experimental
 Bug-Reports: mailto:bart@cs.pdx.edu
 Description:
    This is a very preliminary higher-level Haskell binding
-   for the Notmuch email indexing library
-   (http://notmuchmail.org).
+   for the Notmuch (notmuchmail.org) email indexing library.
 
 Library
   Build-Depends: base, containers, time, filepath
