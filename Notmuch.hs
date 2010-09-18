@@ -4,6 +4,11 @@
 -- Licensed LGPL v3: please see the file COPYING in this
 -- source distribution for licensing information.
 
+-- | This is a very preliminary higher-level Haskell binding
+-- for the Notmuch email library (http://notmuchmail.org).
+-- There is no documentation here; see the Notmuch
+-- documentation for hints on how to use this.
+
 module Notmuch (
   Database, databaseCreate, DatabaseMode(..),
   databaseOpen, databaseClose, databaseGetPath,

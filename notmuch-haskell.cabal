@@ -1,7 +1,8 @@
 Name: notmuch-haskell
 Version: 0.2.2
 Cabal-Version: >= 1.6
-Author: Bart Massey
+Author: Bart Massey <bart@cs.pdx.edu>
+Maintainer: Bart Massey <bart@cs.pdx.edu>
 Copyright: © 2010 Bart Massey
 License: LGPL
 License-file: COPYING
@@ -10,6 +11,10 @@ Category: EMail
 Build-Type: Simple
 Stability: Experimental
 Bug-Reports: mailto:bart@cs.pdx.edu
+Description:
+   This is a very preliminary higher-level Haskell binding
+   for the Notmuch email indexing library
+   (http://notmuchmail.org).
 
 Library
   Build-Depends: base, containers, time, filepath
