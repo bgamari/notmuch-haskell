@@ -4,6 +4,12 @@
 -- Licensed LGPL v3: please see the file COPYING in this
 -- source distribution for licensing information.
 
+-- This program has two modes.  When invoked with no
+-- arguments, it creates a new notmuch database in /tmp.
+-- When given a database argument, it does a search for
+-- "subject:notmuch" in the notmuch database.  It will
+-- upgrade the database if necessary.
+
 import Control.Monad
 import Data.Time
 import IO
