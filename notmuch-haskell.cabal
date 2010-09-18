@@ -7,7 +7,7 @@ Copyright: © 2010 Bart Massey
 License: LGPL
 License-file: COPYING
 Synopsis: Binding for notmuch MUA library
-Category: EMail
+Category: Email Foreign
 Build-Type: Simple
 Stability: Experimental
 Bug-Reports: mailto:bart@cs.pdx.edu
@@ -18,12 +18,12 @@ Description:
 
 Library
   Build-Depends: base, containers, time, filepath
-  Exposed-Modules: Notmuch
-  Other-Modules: NOTMUCH_H
+  Exposed-Modules: Foreign.Notmuch
+  Other-Modules: Foreign.NOTMUCH_H
   Extra-Libraries: notmuch gmime-2.4 z nsl gobject-2.0 glib-2.0 talloc xapian
 
 Executable notmuch-test
   main-is: NotmuchTest.hs
-  other-modules: Notmuch NOTMUCH_H
+  other-modules: Foreign.Notmuch Foreign.NOTMUCH_H
   build-depends: base >= 4 && < 5, haskell98, old-locale, parseargs
   Extra-Libraries: notmuch

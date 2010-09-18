@@ -26,8 +26,8 @@
 
 #include "notmuch.h"
 
-module NOTMUCH_H(
-  module NOTMUCH_H,
+module Foreign.NOTMUCH_H(
+  module Foreign.NOTMUCH_H,
   module Foreign,
   module Foreign.C.String,
   module Foreign.C.Types) where

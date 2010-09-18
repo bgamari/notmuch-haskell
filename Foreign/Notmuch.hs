@@ -9,7 +9,7 @@
 -- There is no documentation here; see the Notmuch
 -- documentation for hints on how to use this.
 
-module Notmuch (
+module Foreign.Notmuch (
   Database, databaseCreate, DatabaseMode(..),
   databaseOpen, databaseClose, databaseGetPath,
   databaseGetVersion, databaseNeedsUpgrade,
@@ -36,7 +36,7 @@ module Notmuch (
   directoryGetChildFiles, directoryGetChildDirectories
 ) where
 
-import NOTMUCH_H
+import Foreign.NOTMUCH_H
 
 import Control.Monad
 import Data.List

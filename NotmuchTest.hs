@@ -13,10 +13,11 @@
 import Control.Monad
 import Data.Time
 import IO
-import Notmuch
 import System.Environment
 import System.Locale
     
+import Foreign.Notmuch
+
 dateString :: FormatTime t => t -> String
 dateString = formatTime defaultTimeLocale "%c"
 
