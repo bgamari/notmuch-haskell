@@ -7,7 +7,7 @@ Copyright: © 2010 Bart Massey
 License: LGPL
 License-file: COPYING
 Synopsis: Binding for notmuch MUA library
-Category: Email Foreign
+Category: Email, Foreign
 Build-Type: Simple
 Stability: Experimental
 Bug-Reports: mailto:bart@cs.pdx.edu
