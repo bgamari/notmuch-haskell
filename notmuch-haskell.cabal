@@ -19,7 +19,7 @@ Library
   Build-Depends: base, containers, time, filepath
   Exposed-Modules: Foreign.Notmuch
   Other-Modules: Foreign.NOTMUCH_H
-  Extra-Libraries: notmuch gmime-2.4 z nsl gobject-2.0 glib-2.0 talloc xapian
+  Extra-Libraries: notmuch gmime-2.6 z nsl gobject-2.0 glib-2.0 talloc xapian
 
 Executable notmuch-test
   main-is: NotmuchTest.hs
