@@ -47,18 +47,21 @@ main = do
   nthreadss <- mapM threadCountMessages threads
   putStr $ show (sum nthreadss) ++ "/" ++ show (length threads) ++ ": "
   print nthreadss
-  let thread = last threads
-  subject <- threadGetSubject thread
-  putStrLn subject
-  messages <- threadGetToplevelMessages thread
-  let message = head messages
-  subject' <- messageGetHeader message "Subject"
-  putStrLn subject'
-  date' <- messageGetHeader message "Date"
-  putStrLn date'
-  date <- messageGetDate message
-  putStrLn $ dateString date
-  localdate <- utcToLocalZonedTime date
-  putStrLn $ dateString localdate
+  case threads of
+    [] -> return ()
+    _ -> do
+      let thread = last threads
+      subject <- threadGetSubject thread
+      putStrLn subject
+      messages <- threadGetToplevelMessages thread
+      let message = head messages
+      subject' <- messageGetHeader message "Subject"
+      putStrLn subject'
+      date' <- messageGetHeader message "Date"
+      putStrLn date'
+      date <- messageGetDate message
+      putStrLn $ dateString date
+      localdate <- utcToLocalZonedTime date
+      putStrLn $ dateString localdate
   databaseClose db
   return ()
