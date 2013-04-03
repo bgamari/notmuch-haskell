@@ -12,7 +12,7 @@
 
 import Control.Monad
 import Data.Time
-import IO
+import System.IO
 import System.Environment
 import System.Locale
     
