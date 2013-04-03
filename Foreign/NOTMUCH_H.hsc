@@ -9,6 +9,11 @@
 --   gcc -E -dD notmuch.h | hsffig >NOTMUCH_H.hsc
 -- Later hand-edited
 
+-- XXX As of GHC 7.2, the #include directives are simply
+-- ignored, even with -fvia-C. This is pretty painful, as it
+-- means that changes to APIs are not noticed by the
+-- compiler. Uggh.
+
 #if __GLASGOW_HASKELL__ && __GLASGOW_HASKELL__ < 409
 #include <Rts.h>
 #endif
@@ -51,13 +56,19 @@ foreign import ccall "static notmuch.h notmuch_status_to_string"
   f_notmuch_status_to_string :: CInt -> IO (Ptr (CChar))
 
 foreign import ccall "static notmuch.h notmuch_database_create"
-  f_notmuch_database_create :: Ptr (CChar) -> IO (Ptr (S__notmuch_database))
+  f_notmuch_database_create :: Ptr (CChar) -> Ptr (Ptr (S__notmuch_database)) -> IO (CInt)
 
 foreign import ccall "static notmuch.h notmuch_database_open"
-  f_notmuch_database_open :: Ptr (CChar) -> CInt -> IO (Ptr (S__notmuch_database))
+  f_notmuch_database_open :: Ptr (CChar) -> CInt -> Ptr (Ptr (S__notmuch_database)) -> IO (CInt)
 
 foreign import ccall "static notmuch.h notmuch_database_close"
   f_notmuch_database_close :: Ptr (S__notmuch_database) -> IO (())
+
+foreign import ccall "static notmuch.h notmuch_database_destroy"
+  f_notmuch_database_destroy :: Ptr (S__notmuch_database) -> IO (())
+
+foreign import ccall "static notmuch.h &notmuch_database_destroy"
+  pf_notmuch_database_destroy :: FunPtr (Ptr (S__notmuch_database) -> IO (()))
 
 foreign import ccall "static notmuch.h notmuch_database_get_path"
   f_notmuch_database_get_path :: Ptr (S__notmuch_database) -> IO (Ptr (CChar))
@@ -73,8 +84,14 @@ foreign import ccall "static notmuch.h notmuch_database_upgrade"
 foreign import ccall "wrapper"
   w_notmuch_database_upgrade_1 :: (Ptr (CChar) -> CDouble -> IO (())) -> IO (FunPtr (Ptr (CChar) -> CDouble -> IO (())))
 
+foreign import ccall "static notmuch.h notmuch_database_begin_atomic"
+  f_notmuch_database_begin_atomic :: Ptr (S__notmuch_database) -> IO (CInt)
+
+foreign import ccall "static notmuch.h notmuch_database_end_atomic"
+  f_notmuch_database_end_atomic :: Ptr (S__notmuch_database) -> IO (CInt)
+
 foreign import ccall "static notmuch.h notmuch_database_get_directory"
-  f_notmuch_database_get_directory :: Ptr (S__notmuch_database) -> Ptr (CChar) -> IO (Ptr (S__notmuch_directory))
+  f_notmuch_database_get_directory :: Ptr (S__notmuch_database) -> Ptr (CChar) -> Ptr (Ptr (S__notmuch_directory)) -> IO (CInt)
 
 foreign import ccall "static notmuch.h notmuch_database_add_message"
   f_notmuch_database_add_message :: Ptr (S__notmuch_database) -> Ptr (CChar) -> Ptr (Ptr (S__notmuch_message)) -> IO (CInt)
@@ -83,13 +100,16 @@ foreign import ccall "static notmuch.h notmuch_database_remove_message"
   f_notmuch_database_remove_message :: Ptr (S__notmuch_database) -> Ptr (CChar) -> IO (CInt)
 
 foreign import ccall "static notmuch.h notmuch_database_find_message"
-  f_notmuch_database_find_message :: Ptr (S__notmuch_database) -> Ptr (CChar) -> IO (Ptr (S__notmuch_message))
+  f_notmuch_database_find_message :: Ptr (S__notmuch_database) -> Ptr (CChar) -> Ptr (Ptr (S__notmuch_message)) -> IO (CInt)
 
 foreign import ccall "static notmuch.h notmuch_database_get_all_tags"
   f_notmuch_database_get_all_tags :: Ptr (S__notmuch_database) -> IO (Ptr (S__notmuch_tags))
 
 foreign import ccall "static notmuch.h notmuch_query_create"
   f_notmuch_query_create :: Ptr (S__notmuch_database) -> Ptr (CChar) -> IO (Ptr (S__notmuch_query))
+
+foreign import ccall "static notmuch.h notmuch_query_set_omit_excluded"
+  f_notmuch_query_set_omit_excluded :: Ptr (S__notmuch_query) -> CInt -> IO (())
 
 foreign import ccall "static notmuch.h notmuch_query_set_sort"
   f_notmuch_query_set_sort :: Ptr (S__notmuch_query) -> CInt -> IO (())
@@ -108,6 +128,9 @@ foreign import ccall "static notmuch.h &notmuch_query_destroy"
 
 foreign import ccall "static notmuch.h notmuch_threads_valid"
   f_notmuch_threads_valid :: Ptr (S__notmuch_threads) -> IO (CInt)
+
+foreign import ccall "static notmuch.h notmuch_query_count_threads"
+  f_notmuch_query_count_threads :: Ptr (S__notmuch_query) -> IO (CUInt)
 
 foreign import ccall "static notmuch.h notmuch_threads_get"
   f_notmuch_threads_get :: Ptr (S__notmuch_threads) -> IO (Ptr (S__notmuch_thread))

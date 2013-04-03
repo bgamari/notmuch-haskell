@@ -4,22 +4,24 @@
 -- Licensed LGPL v3: please see the file COPYING in this
 -- source distribution for licensing information.
 
--- | This is a very preliminary higher-level Haskell binding
+-- | This is a half-assed higher-level Haskell binding
 -- for the Notmuch (notmuchmail.org) email indexing library.
 -- There is no documentation here; see the Notmuch
 -- documentation for hints on how to use this.
 
 module Foreign.Notmuch (
   Database, databaseCreate, DatabaseMode(..),
-  databaseOpen, databaseClose, databaseGetPath,
+  databaseOpen, databaseClose, databaseDestroy, databaseGetPath,
   databaseGetVersion, databaseNeedsUpgrade,
   UpgradeCallback, databaseUpgrade,
+  databaseBeginAtomic, databaseEndAtomic,
   Directory, databaseGetDirectory,
   Message, Messages, databaseAddMessage,
   databaseRemoveMessage, databaseFindMessage,
   Tags, databaseGetAllTags,
-  Query, queryCreate, SortOrder(..), querySetSortOrder,
-  Thread, Threads, queryThreads,
+  Query, queryCreate, querySetOmitExcluded, 
+  SortOrder(..), querySetSortOrder,
+  Thread, Threads, queryCountThreads, queryThreads,
   queryMessages, queryCountMessages,
   getThreadID, threadCountMessages, threadCountMatchedMessages,
   threadGetToplevelMessages, threadGetAuthors,
@@ -44,14 +46,18 @@ import Data.Time
 import Data.Time.Clock.POSIX
 import System.FilePath
 
-newtype Database = Database (Ptr S__notmuch_database)
+newtype Database = Database (ForeignPtr S__notmuch_database)
 
 databaseCreate :: FilePath -> IO Database
-databaseCreate name = do
-  db <- withCString name f_notmuch_database_create
-  when (db == nullPtr) $
-       fail "database create failed"
-  return $ Database db
+databaseCreate filename = alloca dbFun where
+  dbFun dbPtr = do
+    let create fn =
+          f_notmuch_database_create fn dbPtr
+    s <- withCString filename create
+    statusCheck s
+    cdb <- peek dbPtr
+    db <- newForeignPtr pf_notmuch_database_destroy cdb
+    return $ Database db
 
 -- XXX Deriving Enum will only work if these fields are in
 -- the same order as in notmuch.h and there are no gaps
@@ -62,25 +68,34 @@ data DatabaseMode =
     deriving Enum
 
 databaseOpen :: FilePath -> DatabaseMode -> IO Database
-databaseOpen name databaseMode = do
-  db <- withCString name $
-        flip f_notmuch_database_open $
-        fromIntegral $ fromEnum databaseMode
-  when (db == nullPtr) $
-       fail "database open failed"
-  return $ Database db
+databaseOpen filename databaseMode = alloca dbFun where
+  dbFun dbPtr = do
+    let open mode fn =
+          f_notmuch_database_open fn mode dbPtr
+    s <- withCString filename (open (fromIntegral (fromEnum databaseMode)))
+    statusCheck s
+    cdb <- peek dbPtr
+    db <- newForeignPtr pf_notmuch_database_destroy cdb
+    return $ Database db
+
+withDatabase :: Database -> ((Ptr S__notmuch_database) -> IO a) -> IO a
+withDatabase (Database db) f = withForeignPtr db f
 
 databaseClose :: Database -> IO ()
-databaseClose (Database db) = f_notmuch_database_close db
+databaseClose db = withDatabase db f_notmuch_database_close
+
+databaseDestroy :: Database -> IO ()
+databaseDestroy db = withDatabase db f_notmuch_database_destroy
 
 databaseGetPath :: Database -> IO FilePath
-databaseGetPath (Database db) =
-    resultString $ f_notmuch_database_get_path db
+databaseGetPath db = withDatabase db $
+    resultString . f_notmuch_database_get_path
 
 databaseGetVersion :: Database -> IO Int
-databaseGetVersion (Database db) = do
-  v <- f_notmuch_database_get_version db
-  return $ fromIntegral v
+databaseGetVersion db = 
+  withDatabase db $ \dbp -> do
+    v <- f_notmuch_database_get_version dbp
+    return $ fromIntegral v
 
 resultBool :: IO CInt -> IO Bool
 resultBool = fmap (/= 0)
@@ -95,8 +110,8 @@ resultWord :: IO CUInt -> IO Word
 resultWord = fmap fromIntegral
 
 databaseNeedsUpgrade :: Database -> IO Bool
-databaseNeedsUpgrade (Database db) =
-    resultBool $ f_notmuch_database_needs_upgrade db
+databaseNeedsUpgrade db = withDatabase db $
+    resultBool . f_notmuch_database_needs_upgrade
 
 statusCheck :: CInt -> IO ()
 statusCheck 0 = return ()
@@ -107,25 +122,44 @@ statusCheck s = do
 type UpgradeCallback = String -> Double -> IO ()
 
 databaseUpgrade :: Database -> Maybe UpgradeCallback -> IO ()
-databaseUpgrade (Database db) (Just callback) = do
-  let ccb msg progress = do
-        cmsg <- peekCString msg
-        let cprogress = realToFrac progress
-        callback cmsg cprogress
-  cb <- w_notmuch_database_upgrade_1 ccb
-  s <- f_notmuch_database_upgrade db cb nullPtr
-  statusCheck s
-databaseUpgrade (Database db) Nothing = do
-  s <- f_notmuch_database_upgrade db nullFunPtr nullPtr
-  statusCheck s
+databaseUpgrade db (Just callback) = 
+  withDatabase db $ \dbp -> do
+    let ccb msg progress = do
+          cmsg <- peekCString msg
+          let cprogress = realToFrac progress
+          callback cmsg cprogress
+    cb <- w_notmuch_database_upgrade_1 ccb
+    s <- f_notmuch_database_upgrade dbp cb nullPtr
+    statusCheck s
+databaseUpgrade db Nothing = 
+  withDatabase db $ \dbp -> do
+    s <- f_notmuch_database_upgrade dbp nullFunPtr nullPtr
+    statusCheck s
+
+databaseBeginAtomic :: Database -> IO ()
+databaseBeginAtomic db =
+  withDatabase db $ \dbp -> do
+    s <- f_notmuch_database_begin_atomic dbp
+    statusCheck s
+
+databaseEndAtomic :: Database -> IO ()
+databaseEndAtomic db =
+  withDatabase db $ \dbp -> do
+    s <- f_notmuch_database_end_atomic dbp
+    statusCheck s
 
 newtype Directory = Directory (ForeignPtr S__notmuch_directory)
 
 databaseGetDirectory :: Database -> FilePath -> IO Directory
-databaseGetDirectory (Database db) path = withCString path $ (\p -> do
-  dir <- f_notmuch_database_get_directory db p
-  dirp <- newForeignPtr pf_notmuch_directory_destroy dir
-  return $ Directory dirp)
+databaseGetDirectory db path = alloca dirFun where
+  dirFun dirPtr = withDatabase db $ \dbp -> do
+    let getDirectory path =
+          f_notmuch_database_get_directory dbp path dirPtr
+    s <- withCString path getDirectory
+    statusCheck s
+    cdir <- peek dirPtr
+    dir <- newForeignPtr pf_notmuch_directory_destroy cdir
+    return $ Directory dir
   
 type MessagesPtr = ForeignPtr S__notmuch_messages
 
@@ -148,10 +182,10 @@ type Messages = [Message]
 -- succeed.  I have no idea what it should do, and this
 -- was easiest.
 databaseAddMessage :: Database -> FilePath -> IO Message
-databaseAddMessage (Database db) filename = alloca msgFun where
-    msgFun msgPtr = do
+databaseAddMessage db filename = alloca msgFun where
+    msgFun msgPtr = withDatabase db $ \dbp -> do
       let addMessage fn =
-              f_notmuch_database_add_message db fn msgPtr
+              f_notmuch_database_add_message dbp fn msgPtr
       s <- withCString filename addMessage
       statusCheck s
       cmsg <- peek msgPtr
@@ -162,23 +196,25 @@ databaseAddMessage (Database db) filename = alloca msgFun where
 -- succeed.  I have no idea what it should do, and this
 -- was easiest.
 databaseRemoveMessage :: Database -> FilePath -> IO ()
-databaseRemoveMessage (Database db) filename = do
-  let removeMessage fn = f_notmuch_database_remove_message db fn
-  s <- withCString filename removeMessage
-  statusCheck s
+databaseRemoveMessage db filename = 
+  withDatabase db $ \dbp -> do
+    let removeMessage fn = f_notmuch_database_remove_message dbp fn
+    s <- withCString filename removeMessage
+    statusCheck s
 
 -- XXX This might want to return a Maybe Message instead
 -- of failing if the message is not found.  I don't quite
 -- understand the use case yet.
 databaseFindMessage :: Database -> String -> IO Message
-databaseFindMessage (Database db) msgid = do
-  let findMessage mid =
-          f_notmuch_database_find_message db mid
-  cmsg <- withCString msgid findMessage
-  when (cmsg == nullPtr) $
-       fail "database find message failed"
-  m <- newForeignPtr pf_notmuch_message_destroy cmsg
-  return $ Message m
+databaseFindMessage db msgid = alloca msgFun where
+  msgFun msgPtr = withDatabase db $ \dbp -> do
+    let findMessage mid =
+          f_notmuch_database_find_message dbp mid msgPtr
+    s <- withCString msgid findMessage
+    statusCheck s
+    cmsg <- peek msgPtr
+    msg <- newForeignPtr pf_notmuch_message_destroy cmsg
+    return $ Message msg
   
 iterM :: Monad m => a -> (a -> m Bool) -> (a -> m b) -> m [b]
 iterM coln test get = go [] coln test get
@@ -217,8 +253,8 @@ unpackTags tags = do
 
 
 databaseGetAllTags :: Database -> IO Tags
-databaseGetAllTags (Database db) = do
-  tags <- f_notmuch_database_get_all_tags db
+databaseGetAllTags db = do
+  tags <- withDatabase db $ f_notmuch_database_get_all_tags
   when (tags == nullPtr) $
        fail "database get all tags failed"
   unpackTags tags
@@ -226,12 +262,18 @@ databaseGetAllTags (Database db) = do
 newtype Query = Query (ForeignPtr S__notmuch_query)
 
 queryCreate :: Database -> String -> IO Query
-queryCreate (Database db) queryString = do
-    query <- withCString queryString $ f_notmuch_query_create db
+queryCreate db queryString = 
+  withDatabase db $ \dbp -> do
+    query <- withCString queryString (f_notmuch_query_create dbp)
     when (query == nullPtr) $
-         fail "query create failed"
+      fail "query create failed"
     queryp <- newForeignPtr pf_notmuch_query_destroy query
     return $ Query queryp
+
+querySetOmitExcluded :: Query -> Bool -> IO ()
+querySetOmitExcluded (Query query) omit = 
+  withForeignPtr query $ \q ->
+    f_notmuch_query_set_omit_excluded q (fromIntegral (fromEnum omit))
 
 -- XXX Deriving Enum will only work if these fields are in
 -- the same order as in notmuch.h and there are no gaps
@@ -262,6 +304,10 @@ data Thread = QueryThread { qtpp :: Query,
                               tp :: ThreadPtr }
 
 type Threads = [Thread]
+
+queryCountThreads :: Query -> IO Word
+queryCountThreads (Query query) =
+    withForeignPtr query $ resultWord . f_notmuch_query_count_threads
 
 queryThreads :: Query -> IO Threads
 queryThreads (Query query) = withForeignPtr query $ \q -> do
@@ -399,7 +445,7 @@ messageGetFilePath message = withForeignPtr (mp message) $ \m -> do
   peekCString path
 
 data MessageFlag =
-    MessageFlagMatch
+    MessageFlagMatch | MessageFlagExcluded
     deriving Enum             
 
 messageGetFlag :: Message -> MessageFlag -> IO Bool
