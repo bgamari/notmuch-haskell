@@ -22,7 +22,7 @@
 
 #def void _dummy_force_NOTMUCH_H_hsc_c (void) { }
 
-{-# OPTIONS -fglasgow-exts -XForeignFunctionInterface #-}
+{-# OPTIONS -XForeignFunctionInterface #-}
 
 #include "notmuch.h"
 
