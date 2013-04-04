@@ -1,5 +1,5 @@
 Name: notmuch-haskell
-Version: 1.0.0.0
+Version: 1.0.0.1
 Cabal-Version: >= 1.6
 Author: Bart Massey <bart@cs.pdx.edu>
 Maintainer: Bart Massey <bart@cs.pdx.edu>
@@ -19,7 +19,7 @@ Library
   Build-Depends: base >= 4.5, containers >= 0.4.2, time >= 1.4, filepath >= 0.1.3
   Exposed-Modules: Foreign.Notmuch
   Other-Modules: Foreign.NOTMUCH_H
-  Extra-Libraries: notmuch gmime-2.6 z nsl gobject-2.0 glib-2.0 talloc xapian
+  Extra-Libraries: notmuch
 
 Executable notmuch-test
   main-is: NotmuchTest.hs
