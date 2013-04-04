@@ -38,7 +38,6 @@ module Foreign.NOTMUCH_H(
   module Foreign.C.Types) where
 
 import Foreign
-import Foreign.Ptr
 import Foreign.C.Types
 import Foreign.C.String
 

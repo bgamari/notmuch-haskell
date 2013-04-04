@@ -44,7 +44,6 @@ import Control.Monad
 import Data.List
 import Data.Time
 import Data.Time.Clock.POSIX
-import System.FilePath
 
 newtype Database = Database (ForeignPtr S__notmuch_database)
 
@@ -153,8 +152,8 @@ newtype Directory = Directory (ForeignPtr S__notmuch_directory)
 databaseGetDirectory :: Database -> FilePath -> IO Directory
 databaseGetDirectory db path = alloca dirFun where
   dirFun dirPtr = withDatabase db $ \dbp -> do
-    let getDirectory path =
-          f_notmuch_database_get_directory dbp path dirPtr
+    let getDirectory pathp =
+          f_notmuch_database_get_directory dbp pathp dirPtr
     s <- withCString path getDirectory
     statusCheck s
     cdir <- peek dirPtr
@@ -165,12 +164,21 @@ type MessagesPtr = ForeignPtr S__notmuch_messages
 
 type MessagePtr = ForeignPtr S__notmuch_message
 
-data MessagesRef = QueryMessages { qmpp :: Query, msp :: MessagesPtr }
-                 | ThreadMessages { tmpp :: Thread, msp :: MessagesPtr }
-                 | MessageMessages { mmspp :: Message, msp :: MessagesPtr }
+data MessagesRef = QueryMessages  Query MessagesPtr
+                 | ThreadMessages Thread MessagesPtr
+                 | MessageMessages Message MessagesPtr
 
-data Message = MessagesMessage { msmpp :: MessagesRef, mp :: MessagePtr }
-             | Message { mp :: MessagePtr }
+msp :: MessagesRef -> MessagesPtr
+msp (QueryMessages _ m) = m
+msp (ThreadMessages _ m) = m
+msp (MessageMessages _ m) = m
+
+data Message = MessagesMessage MessagesRef MessagePtr
+             | Message MessagePtr
+
+mp :: Message -> MessagePtr
+mp (MessagesMessage _ m) = m
+mp (Message m) = m
 
 type Messages = [Message]
 
@@ -217,13 +225,13 @@ databaseFindMessage db msgid = alloca msgFun where
     return $ Message msg
   
 iterM :: Monad m => a -> (a -> m Bool) -> (a -> m b) -> m [b]
-iterM coln test get = go [] coln test get
-    where go acc coln test get = do
+iterM coln test get = go []
+    where go acc = do
             cont <- test coln
             case cont of
               True -> do
-                elem <- get coln
-                go (elem : acc) coln test get
+                e <- get coln
+                go (e : acc)
               False -> return acc
 
 iterUnpack :: Ptr a -> (Ptr a -> IO CInt) ->
@@ -295,13 +303,14 @@ type ThreadsPtr = ForeignPtr S__notmuch_threads
 
 type ThreadPtr = ForeignPtr S__notmuch_thread
 
-data ThreadsRef = QueryThreads { qtspp :: Query,
-                                 tsp :: ThreadsPtr }
+data ThreadsRef = QueryThreads Query ThreadsPtr
 
-data Thread = QueryThread { qtpp :: Query,
-                            tp :: ThreadPtr }
-            | ThreadsThread { ttpp :: ThreadsRef,
-                              tp :: ThreadPtr }
+data Thread = QueryThread Query ThreadPtr
+            | ThreadsThread ThreadsRef ThreadPtr
+
+tp :: Thread -> ThreadPtr
+tp (QueryThread _ t) = t
+tp (ThreadsThread _ t) = t
 
 type Threads = [Thread]
 
@@ -314,14 +323,14 @@ queryThreads (Query query) = withForeignPtr query $ \q -> do
   threads <- f_notmuch_query_search_threads q
   when (threads == nullPtr) $
        fail "query threads failed"
-  tsp <- newForeignPtr pf_notmuch_threads_destroy threads
-  let qts = QueryThreads (Query query) tsp
+  t <- newForeignPtr pf_notmuch_threads_destroy threads
+  let qts = QueryThreads (Query query) t
   iterUnpack threads
       f_notmuch_threads_valid
       (\ts -> do
-         t <- f_notmuch_threads_get ts
-         tp <- newForeignPtr pf_notmuch_thread_destroy t
-         let tst = ThreadsThread qts tp
+         t' <- f_notmuch_threads_get ts
+         t'' <- newForeignPtr pf_notmuch_thread_destroy t'
+         let tst = ThreadsThread qts t''
          return tst)
       f_notmuch_threads_move_to_next
 
@@ -331,8 +340,8 @@ unpackMessages messages = withForeignPtr (msp messages) $ \ms -> do
       f_notmuch_messages_valid
       (\t -> do
          m <- f_notmuch_messages_get t
-         mp <- newForeignPtr pf_notmuch_message_destroy m
-         let msm = MessagesMessage messages mp
+         m' <- newForeignPtr pf_notmuch_message_destroy m
+         let msm = MessagesMessage messages m'
          return msm)
       f_notmuch_messages_move_to_next
 
@@ -504,10 +513,10 @@ messageThaw message = withForeignPtr (mp message) $ \m -> do
 
 directorySetMtime :: Directory -> UTCTime -> IO ()
 directorySetMtime (Directory dir) time = withForeignPtr dir $ \d -> do
-  let t = fromIntegral $ floor $ realToFrac $ utcTimeToPOSIXSeconds time
+  let t = floor $ utcTimeToPOSIXSeconds time :: Integer
   when (t <= 0) $
        fail "directory set mtime with invalid mtime"
-  s <- f_notmuch_directory_set_mtime d t
+  s <- f_notmuch_directory_set_mtime d (fromIntegral t)
   statusCheck s
 
 directoryGetMtime :: Directory -> IO UTCTime

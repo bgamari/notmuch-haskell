@@ -1,5 +1,5 @@
 Name: notmuch-haskell
-Version: 1.0.0.1
+Version: 1.0.0.2
 Cabal-Version: >= 1.6
 Author: Bart Massey <bart@cs.pdx.edu>
 Maintainer: Bart Massey <bart@cs.pdx.edu>

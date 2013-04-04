@@ -12,7 +12,6 @@
 
 import Control.Monad
 import Data.Time
-import System.IO
 import System.Environment
 import System.Locale
     
@@ -21,6 +20,7 @@ import Foreign.Notmuch
 dateString :: FormatTime t => t -> String
 dateString = formatTime defaultTimeLocale "%c"
 
+main :: IO ()
 main = do
   argv <- getArgs
   db <- if (length argv == 0)
