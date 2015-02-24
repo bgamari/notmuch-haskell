@@ -9,6 +9,8 @@
 -- There is no documentation here; see the Notmuch
 -- documentation for hints on how to use this.
 
+{-# LANGUAGE ForeignFunctionInterface #-}
+
 module Foreign.Notmuch (
   Database, databaseCreate, DatabaseMode(..),
   databaseOpen, databaseClose, databaseDestroy, databaseGetPath,
@@ -19,14 +21,17 @@ module Foreign.Notmuch (
   Message, Messages, databaseAddMessage,
   databaseRemoveMessage, databaseFindMessage,
   Tags, databaseGetAllTags,
+
   Query, queryCreate, querySetOmitExcluded, 
   SortOrder(..), querySetSortOrder,
   Thread, Threads, queryCountThreads, queryThreads,
   queryMessages, queryCountMessages,
+
   getThreadID, threadCountMessages, threadCountMatchedMessages,
   threadGetToplevelMessages, threadGetAuthors,
   threadGetSubject, threadGetOldestDate, threadGetNewestDate,
   threadGetTags,
+
   messagesCollectTags, messageGetMessageID, messageGetThreadID,
   messageGetReplies, messageGetFilePath,
   MessageFlag(..), messageGetFlag, messageSetFlag,
@@ -34,6 +39,7 @@ module Foreign.Notmuch (
   messageGetTags, messageAddTag,
   messageRemoveTag, messageRemoveAllTags,
   messageFreeze, messageThaw,
+
   directorySetMtime, directoryGetMtime,
   directoryGetChildFiles, directoryGetChildDirectories
 ) where
@@ -45,7 +51,35 @@ import Data.List
 import Data.Time
 import Data.Time.Clock.POSIX
 
-newtype Database = Database (ForeignPtr S__notmuch_database)
+-- GHC's garbage collector will run finalizers in arbitrary order once it
+-- has a set of objects to be freed. This wreaks havoc with libnotmuch as
+-- we can end up, e.g., destroying a Database before a Query it owns.
+-- For this reason, all of the objects representations in this binding
+-- have an auxilary TallocCtx which references child objects. This ensures that
+-- the *_destroy function doesn't actually free the object until all
+-- objects depending upon it have been garbage-collected.
+foreign import ccall "wrapper"
+  mkFinalizer :: (Ptr a -> IO ()) -> IO (FinalizerPtr a)
+foreign import ccall "dynamic"
+  runFinalizer :: FinalizerPtr a -> (Ptr a -> IO ())
+
+-- | @newForeignPtrWithRef ref finalizer ptr@ creates a new 'ForeignPtr' to @ptr@,
+-- adding an additional talloc reference to  @ref@ and setting up an appropriate
+-- finalizer, calling @finalizer@ to free @ptr@.
+newForeignPtrWithRef :: Ptr ref -> FinalizerPtr b -> Ptr b -> IO (ForeignPtr b)
+newForeignPtrWithRef ref finalizer ptr = do
+  res <- f_talloc_reference ptr ref
+  when (res /= nullPtr) $ putStrLn "Warning: reference failed"
+  fp <- mkFinalizer finalize
+  newForeignPtr fp ptr
+  where
+    finalize ptr' = do
+      runFinalizer finalizer ptr'
+      res' <- f_talloc_unlink ptr' ref
+      when (res' /= 0) $ putStrLn "Warning: unlink failed"
+      return ()
+
+data Database = Database (ForeignPtr S__notmuch_database)
 
 databaseCreate :: FilePath -> IO Database
 databaseCreate filename = alloca dbFun where
@@ -157,7 +191,7 @@ databaseGetDirectory db path = alloca dirFun where
     s <- withCString path getDirectory
     statusCheck s
     cdir <- peek dirPtr
-    dir <- newForeignPtr pf_notmuch_directory_destroy cdir
+    dir <- newForeignPtrWithRef dbp pf_notmuch_directory_destroy cdir
     return $ Directory dir
   
 type MessagesPtr = ForeignPtr S__notmuch_messages
@@ -197,7 +231,7 @@ databaseAddMessage db filename = alloca msgFun where
       s <- withCString filename addMessage
       statusCheck s
       cmsg <- peek msgPtr
-      m <- newForeignPtr pf_notmuch_message_destroy cmsg
+      m <- newForeignPtrWithRef dbp pf_notmuch_message_destroy cmsg
       return $ Message m
 
 -- XXX This function will fail on dup remove, rather than
@@ -221,7 +255,7 @@ databaseFindMessage db msgid = alloca msgFun where
     s <- withCString msgid findMessage
     statusCheck s
     cmsg <- peek msgPtr
-    msg <- newForeignPtr pf_notmuch_message_destroy cmsg
+    msg <- newForeignPtrWithRef dbp pf_notmuch_message_destroy cmsg
     return $ Message msg
   
 iterM :: Monad m => a -> (a -> m Bool) -> (a -> m b) -> m [b]
@@ -275,7 +309,7 @@ queryCreate db queryString =
     query <- withCString queryString (f_notmuch_query_create dbp)
     when (query == nullPtr) $
       fail "query create failed"
-    queryp <- newForeignPtr pf_notmuch_query_destroy query
+    queryp <- newForeignPtrWithRef dbp pf_notmuch_query_destroy query
     return $ Query queryp
 
 querySetOmitExcluded :: Query -> Bool -> IO ()
@@ -323,7 +357,7 @@ queryThreads (Query query) = withForeignPtr query $ \q -> do
   threads <- f_notmuch_query_search_threads q
   when (threads == nullPtr) $
        fail "query threads failed"
-  t <- newForeignPtr pf_notmuch_threads_destroy threads
+  t <- newForeignPtrWithRef q pf_notmuch_threads_destroy threads
   let qts = QueryThreads (Query query) t
   iterUnpack threads
       f_notmuch_threads_valid
@@ -340,7 +374,7 @@ unpackMessages messages = withForeignPtr (msp messages) $ \ms -> do
       f_notmuch_messages_valid
       (\t -> do
          m <- f_notmuch_messages_get t
-         m' <- newForeignPtr pf_notmuch_message_destroy m
+         m' <- newForeignPtrWithRef ms pf_notmuch_message_destroy m
          let msm = MessagesMessage messages m'
          return msm)
       f_notmuch_messages_move_to_next
@@ -350,7 +384,7 @@ queryMessages (Query query) = withForeignPtr query $ \q -> do
   messages <- f_notmuch_query_search_messages q
   when (messages == nullPtr) $
        fail "query messages failed"
-  ms <- newForeignPtr pf_notmuch_messages_destroy messages
+  ms <- newForeignPtrWithRef q pf_notmuch_messages_destroy messages
   let qms = QueryMessages (Query query) ms
   unpackMessages qms
 
@@ -375,7 +409,7 @@ threadGetToplevelMessages thread = withForeignPtr (tp thread) $ \t -> do
   messages <- f_notmuch_thread_get_toplevel_messages t
   when (messages == nullPtr) $
        fail "thread get top-level messages failed"
-  ms <- newForeignPtr pf_notmuch_messages_destroy messages
+  ms <- newForeignPtrWithRef t pf_notmuch_messages_destroy messages
   let tms = ThreadMessages thread ms
   unpackMessages tms
 
@@ -442,7 +476,7 @@ messageGetReplies message = withForeignPtr (mp message) $ \m -> do
   messages <- f_notmuch_message_get_replies m
   when (messages == nullPtr) $
        fail "message get replies failed"
-  ms <- newForeignPtr pf_notmuch_messages_destroy messages
+  ms <- newForeignPtrWithRef m pf_notmuch_messages_destroy messages
   let mms = MessageMessages message ms
   unpackMessages mms
   
