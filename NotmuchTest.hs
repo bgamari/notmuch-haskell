@@ -1,3 +1,5 @@
+{-# LANGUAGE CPP #-}
+
 -- notmuch-haskell: notmuch MUA Haskell binding
 -- test / demo program
 -- Copyright © 2010 Bart Massey
@@ -13,8 +15,10 @@
 import Control.Monad
 import Data.Time
 import System.Environment
+#if ! MIN_VERSION_time(1,5,0)
 import System.Locale
-    
+#endif
+
 import Foreign.Notmuch
 
 dateString :: FormatTime t => t -> String
