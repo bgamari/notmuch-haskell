@@ -46,6 +46,7 @@ module Foreign.Notmuch (
 
 import Foreign.NOTMUCH_H
 
+import qualified Foreign.Concurrent as FC
 import Control.Monad
 import Data.List
 import Data.Time
@@ -58,8 +59,7 @@ import Data.Time.Clock.POSIX
 -- have an auxilary TallocCtx which references child objects. This ensures that
 -- the *_destroy function doesn't actually free the object until all
 -- objects depending upon it have been garbage-collected.
-foreign import ccall "wrapper"
-  mkFinalizer :: (Ptr a -> IO ()) -> IO (FinalizerPtr a)
+
 foreign import ccall "dynamic"
   runFinalizer :: FinalizerPtr a -> (Ptr a -> IO ())
 
@@ -68,14 +68,13 @@ foreign import ccall "dynamic"
 -- finalizer, calling @finalizer@ to free @ptr@.
 newForeignPtrWithRef :: Ptr ref -> FinalizerPtr b -> Ptr b -> IO (ForeignPtr b)
 newForeignPtrWithRef ref finalizer ptr = do
-  res <- f_talloc_reference ptr ref
-  when (res /= nullPtr) $ putStrLn "Warning: reference failed"
-  fp <- mkFinalizer finalize
-  newForeignPtr fp ptr
+  res <- f_talloc_increase_ref_count ref
+  when (res /= 0) $ putStrLn "Warning: reference failed"
+  FC.newForeignPtr ptr finalize
   where
-    finalize ptr' = do
-      runFinalizer finalizer ptr'
-      res' <- f_talloc_unlink ptr' ref
+    finalize = do
+      runFinalizer finalizer ptr
+      res' <- f_talloc_unlink nullPtr ref
       when (res' /= 0) $ putStrLn "Warning: unlink failed"
       return ()
 

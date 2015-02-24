@@ -41,17 +41,14 @@ import Foreign
 import Foreign.C.Types
 import Foreign.C.String
 
---foreign import ccall "static talloc.h talloc_size"
---  f_talloc_size :: Ptr a -> CSize -> IO (Ptr a)
+foreign import ccall "static talloc.h talloc_increase_ref_count"
+  f_talloc_increase_ref_count :: Ptr a -> IO CInt
 
-foreign import ccall "static talloc.h talloc_reference"
-  f_talloc_reference :: Ptr ctx -> Ptr a -> IO (Ptr a)
+--foreign import ccall "static talloc.h talloc_reference"
+--  f_talloc_reference :: Ptr ctx -> Ptr a -> IO (Ptr a)
 
 foreign import ccall "static talloc.h talloc_unlink"
   f_talloc_unlink :: Ptr ctx -> Ptr a -> IO CInt
-
---foreign import ccall "static talloc.h talloc_free"
---  f_talloc_free :: Ptr a -> IO CInt
 
 newtype S__notmuch_database = S__notmuch_database ()
 newtype S__notmuch_directory = S__notmuch_directory ()
