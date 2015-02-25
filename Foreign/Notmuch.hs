@@ -46,7 +46,7 @@ module Foreign.Notmuch (
 
 import Foreign.NOTMUCH_H
 
-import qualified Foreign.Concurrent as FC
+import Control.Applicative
 import Control.Monad
 import Data.List
 import Data.Time
@@ -60,25 +60,15 @@ import Data.Time.Clock.POSIX
 -- the *_destroy function doesn't actually free the object until all
 -- objects depending upon it have been garbage-collected.
 
-foreign import ccall "dynamic"
-  runFinalizer :: FinalizerPtr a -> (Ptr a -> IO ())
+newtype TallocRef = TallocRef (ForeignPtr ())
 
--- | @newForeignPtrWithRef ref finalizer ptr@ creates a new 'ForeignPtr' to @ptr@,
--- adding an additional talloc reference to  @ref@ and setting up an appropriate
--- finalizer, calling @finalizer@ to free @ptr@.
-newForeignPtrWithRef :: Ptr ref -> FinalizerPtr b -> Ptr b -> IO (ForeignPtr b)
-newForeignPtrWithRef ref finalizer ptr = do
-  res <- f_talloc_increase_ref_count ref
-  when (res /= 0) $ putStrLn "Warning: reference failed"
-  FC.newForeignPtr ptr finalize
-  where
-    finalize = do
-      runFinalizer finalizer ptr
-      res' <- f_talloc_unlink nullPtr ref
-      when (res' /= 0) $ putStrLn "Warning: unlink failed"
-      return ()
+newTallocRef :: Ptr a -> IO TallocRef
+newTallocRef ptr = do
+  res <- f_talloc_increase_ref_count ptr
+  when (res /= 0) $ putStrLn "Warning: adding reference failed"
+  TallocRef <$> newForeignPtrEnv pf_talloc_ref_finalizer nullPtr (castPtr ptr)
 
-data Database = Database (ForeignPtr S__notmuch_database)
+newtype Database = Database (ForeignPtr S__notmuch_database)
 
 databaseCreate :: FilePath -> IO Database
 databaseCreate filename = alloca dbFun where
@@ -180,7 +170,7 @@ databaseEndAtomic db =
     s <- f_notmuch_database_end_atomic dbp
     statusCheck s
 
-newtype Directory = Directory (ForeignPtr S__notmuch_directory)
+data Directory = Directory !TallocRef !(ForeignPtr S__notmuch_directory)
 
 databaseGetDirectory :: Database -> FilePath -> IO Directory
 databaseGetDirectory db path = alloca dirFun where
@@ -190,28 +180,23 @@ databaseGetDirectory db path = alloca dirFun where
     s <- withCString path getDirectory
     statusCheck s
     cdir <- peek dirPtr
-    dir <- newForeignPtrWithRef dbp pf_notmuch_directory_destroy cdir
-    return $ Directory dir
+    dir <- newForeignPtr pf_notmuch_directory_destroy cdir
+    ref <- newTallocRef dbp
+    return $ Directory ref dir
   
 type MessagesPtr = ForeignPtr S__notmuch_messages
 
 type MessagePtr = ForeignPtr S__notmuch_message
 
-data MessagesRef = QueryMessages  Query MessagesPtr
-                 | ThreadMessages Thread MessagesPtr
-                 | MessageMessages Message MessagesPtr
+data MessagesRef = MessagesRef !TallocRef !MessagesPtr
 
 msp :: MessagesRef -> MessagesPtr
-msp (QueryMessages _ m) = m
-msp (ThreadMessages _ m) = m
-msp (MessageMessages _ m) = m
+msp (MessagesRef _ m) = m
 
-data Message = MessagesMessage MessagesRef MessagePtr
-             | Message MessagePtr
+data Message = Message !TallocRef !MessagePtr
 
 mp :: Message -> MessagePtr
-mp (MessagesMessage _ m) = m
-mp (Message m) = m
+mp (Message _ m) = m
 
 type Messages = [Message]
 
@@ -230,8 +215,9 @@ databaseAddMessage db filename = alloca msgFun where
       s <- withCString filename addMessage
       statusCheck s
       cmsg <- peek msgPtr
-      m <- newForeignPtrWithRef dbp pf_notmuch_message_destroy cmsg
-      return $ Message m
+      m <- newForeignPtr pf_notmuch_message_destroy cmsg
+      ref <- newTallocRef dbp
+      return $ Message ref m
 
 -- XXX This function will fail on dup remove, rather than
 -- succeed.  I have no idea what it should do, and this
@@ -254,8 +240,9 @@ databaseFindMessage db msgid = alloca msgFun where
     s <- withCString msgid findMessage
     statusCheck s
     cmsg <- peek msgPtr
-    msg <- newForeignPtrWithRef dbp pf_notmuch_message_destroy cmsg
-    return $ Message msg
+    msg <- newForeignPtr pf_notmuch_message_destroy cmsg
+    ref <- newTallocRef dbp
+    return $ Message ref msg
   
 iterM :: Monad m => a -> (a -> m Bool) -> (a -> m b) -> m [b]
 iterM coln test get = go []
@@ -300,7 +287,7 @@ databaseGetAllTags db = do
        fail "database get all tags failed"
   unpackTags tags
 
-newtype Query = Query (ForeignPtr S__notmuch_query)
+data Query = Query !TallocRef !(ForeignPtr S__notmuch_query)
 
 queryCreate :: Database -> String -> IO Query
 queryCreate db queryString = 
@@ -308,11 +295,12 @@ queryCreate db queryString =
     query <- withCString queryString (f_notmuch_query_create dbp)
     when (query == nullPtr) $
       fail "query create failed"
-    queryp <- newForeignPtrWithRef dbp pf_notmuch_query_destroy query
-    return $ Query queryp
+    queryp <- newForeignPtr pf_notmuch_query_destroy query
+    ref <- newTallocRef dbp
+    return $ Query ref queryp
 
 querySetOmitExcluded :: Query -> Bool -> IO ()
-querySetOmitExcluded (Query query) omit = 
+querySetOmitExcluded (Query _ query) omit = 
   withForeignPtr query $ \q ->
     f_notmuch_query_set_omit_excluded q (fromIntegral (fromEnum omit))
 
@@ -326,7 +314,7 @@ data SortOrder =
     deriving Enum
 
 querySetSortOrder :: Query -> SortOrder -> IO ()
-querySetSortOrder (Query query) sortOrder =
+querySetSortOrder (Query _ query) sortOrder =
     let setSort query' =
             f_notmuch_query_set_sort query' $
             fromIntegral $ fromEnum sortOrder in
@@ -336,10 +324,10 @@ type ThreadsPtr = ForeignPtr S__notmuch_threads
 
 type ThreadPtr = ForeignPtr S__notmuch_thread
 
-data ThreadsRef = QueryThreads Query ThreadsPtr
+data ThreadsRef = QueryThreads !TallocRef !ThreadsPtr
 
-data Thread = QueryThread Query ThreadPtr
-            | ThreadsThread ThreadsRef ThreadPtr
+data Thread = QueryThread !TallocRef !ThreadPtr
+            | ThreadsThread !ThreadsRef !ThreadPtr
 
 tp :: Thread -> ThreadPtr
 tp (QueryThread _ t) = t
@@ -348,16 +336,17 @@ tp (ThreadsThread _ t) = t
 type Threads = [Thread]
 
 queryCountThreads :: Query -> IO Word
-queryCountThreads (Query query) =
+queryCountThreads (Query _ query) =
     withForeignPtr query $ resultWord . f_notmuch_query_count_threads
 
 queryThreads :: Query -> IO Threads
-queryThreads (Query query) = withForeignPtr query $ \q -> do
+queryThreads (Query _ query) = withForeignPtr query $ \q -> do
   threads <- f_notmuch_query_search_threads q
   when (threads == nullPtr) $
        fail "query threads failed"
-  t <- newForeignPtrWithRef q pf_notmuch_threads_destroy threads
-  let qts = QueryThreads (Query query) t
+  t <- newForeignPtr pf_notmuch_threads_destroy threads
+  ref <- newTallocRef q
+  let qts = QueryThreads ref t
   iterUnpack threads
       f_notmuch_threads_valid
       (\ts -> do
@@ -373,22 +362,24 @@ unpackMessages messages = withForeignPtr (msp messages) $ \ms -> do
       f_notmuch_messages_valid
       (\t -> do
          m <- f_notmuch_messages_get t
-         m' <- newForeignPtrWithRef ms pf_notmuch_message_destroy m
-         let msm = MessagesMessage messages m'
+         m' <- newForeignPtr pf_notmuch_message_destroy m
+         ref <- newTallocRef ms
+         let msm = Message ref m'
          return msm)
       f_notmuch_messages_move_to_next
 
 queryMessages :: Query -> IO Messages
-queryMessages (Query query) = withForeignPtr query $ \q -> do
+queryMessages (Query _ query) = withForeignPtr query $ \q -> do
   messages <- f_notmuch_query_search_messages q
   when (messages == nullPtr) $
        fail "query messages failed"
-  ms <- newForeignPtrWithRef q pf_notmuch_messages_destroy messages
-  let qms = QueryMessages (Query query) ms
+  ms <- newForeignPtr pf_notmuch_messages_destroy messages
+  ref <- newTallocRef q
+  let qms = MessagesRef ref ms
   unpackMessages qms
 
 queryCountMessages :: Query -> IO Word
-queryCountMessages (Query query) = withForeignPtr query $
+queryCountMessages (Query _ query) = withForeignPtr query $
     resultWord . f_notmuch_query_count_messages
 
 getThreadID :: Thread -> IO String
@@ -408,8 +399,9 @@ threadGetToplevelMessages thread = withForeignPtr (tp thread) $ \t -> do
   messages <- f_notmuch_thread_get_toplevel_messages t
   when (messages == nullPtr) $
        fail "thread get top-level messages failed"
-  ms <- newForeignPtrWithRef t pf_notmuch_messages_destroy messages
-  let tms = ThreadMessages thread ms
+  ms <- newForeignPtr pf_notmuch_messages_destroy messages
+  ref <- newTallocRef t
+  let tms = MessagesRef ref ms
   unpackMessages tms
 
 -- XXX This pretty clearly wants to return a list of authors
@@ -475,8 +467,9 @@ messageGetReplies message = withForeignPtr (mp message) $ \m -> do
   messages <- f_notmuch_message_get_replies m
   when (messages == nullPtr) $
        fail "message get replies failed"
-  ms <- newForeignPtrWithRef m pf_notmuch_messages_destroy messages
-  let mms = MessageMessages message ms
+  ms <- newForeignPtr pf_notmuch_messages_destroy messages
+  ref <- newTallocRef m
+  let mms = MessagesRef ref ms
   unpackMessages mms
   
 messageGetFilePath :: Message -> IO FilePath
@@ -545,7 +538,7 @@ messageThaw message = withForeignPtr (mp message) $ \m -> do
   statusCheck s
 
 directorySetMtime :: Directory -> UTCTime -> IO ()
-directorySetMtime (Directory dir) time = withForeignPtr dir $ \d -> do
+directorySetMtime (Directory _ dir) time = withForeignPtr dir $ \d -> do
   let t = floor $ utcTimeToPOSIXSeconds time :: Integer
   when (t <= 0) $
        fail "directory set mtime with invalid mtime"
@@ -553,14 +546,14 @@ directorySetMtime (Directory dir) time = withForeignPtr dir $ \d -> do
   statusCheck s
 
 directoryGetMtime :: Directory -> IO UTCTime
-directoryGetMtime (Directory dir) = withForeignPtr dir $ \d -> do
+directoryGetMtime (Directory _ dir) = withForeignPtr dir $ \d -> do
   t <- f_notmuch_directory_get_mtime d
   when (t <= 0) $
        fail "directory get mtime failed"
   return $ posixSecondsToUTCTime $ realToFrac t
 
 directoryGetChildFiles :: Directory -> IO [FilePath]
-directoryGetChildFiles (Directory dir) = withForeignPtr dir $ \d -> do
+directoryGetChildFiles (Directory _ dir) = withForeignPtr dir $ \d -> do
   filenames <- f_notmuch_directory_get_child_files d
   iterUnpack filenames
     f_notmuch_filenames_valid
@@ -568,7 +561,7 @@ directoryGetChildFiles (Directory dir) = withForeignPtr dir $ \d -> do
     f_notmuch_filenames_move_to_next
 
 directoryGetChildDirectories :: Directory -> IO [FilePath]
-directoryGetChildDirectories (Directory dir) = withForeignPtr dir $ \d -> do
+directoryGetChildDirectories (Directory _ dir) = withForeignPtr dir $ \d -> do
   filenames <- f_notmuch_directory_get_child_directories d
   iterUnpack filenames
     f_notmuch_filenames_valid

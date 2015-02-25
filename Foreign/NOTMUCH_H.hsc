@@ -47,8 +47,8 @@ foreign import ccall "static talloc.h talloc_increase_ref_count"
 --foreign import ccall "static talloc.h talloc_reference"
 --  f_talloc_reference :: Ptr ctx -> Ptr a -> IO (Ptr a)
 
-foreign import ccall "static talloc.h talloc_unlink"
-  f_talloc_unlink :: Ptr ctx -> Ptr a -> IO CInt
+foreign import ccall "static &talloc_ref_finalizer"
+  pf_talloc_ref_finalizer :: FunPtr (Ptr env -> Ptr a -> IO ())
 
 newtype S__notmuch_database = S__notmuch_database ()
 newtype S__notmuch_directory = S__notmuch_directory ()

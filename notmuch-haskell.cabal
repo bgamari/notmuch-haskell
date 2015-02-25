@@ -21,6 +21,7 @@ Library
   Other-Modules: Foreign.NOTMUCH_H
   Extra-Libraries: notmuch, talloc
   GHC-Options: -O2 -Wall
+  c-sources: cbits/talloc-ref.c
 
 Executable notmuch-test
   main-is: NotmuchTest.hs
@@ -28,3 +29,4 @@ Executable notmuch-test
   build-depends: base >= 4.5, old-locale >=1
   Extra-Libraries: notmuch, talloc
   GHC-Options: -Wall
+  c-sources: cbits/talloc-ref.c
